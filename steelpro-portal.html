@@ -1,0 +1,2387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SteelPro Portal — Architecture &amp; Interface Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* product tokens — fixed, these are the shipped product's colours */
+  --ink:#0B2545; --ink-2:#123A63; --ink-3:#1B4B7A;
+  --steel:#2D6CA8; --steel-soft:#E9F1F9; --steel-line:#BBD3E9;
+  --sheet:#FFFFFF; --paper:#F3F5F8; --rule:#D8DFE7; --rule-2:#EBEFF4;
+  --text:#17222E; --muted:#5C6B7C; --muted-2:#8595A6;
+  --ok:#16794A; --ok-bg:#E3F2EA; --ok-line:#B7DFC8;
+  --warn:#B26A05; --warn-bg:#FBF0DB; --warn-line:#EFD49B;
+  --stop:#B3312A; --stop-bg:#FAE9E7; --stop-line:#EFC3BE;
+  --shadow:0 1px 2px rgba(11,37,69,.06), 0 8px 24px -12px rgba(11,37,69,.18);
+  --shadow-sm:0 1px 2px rgba(11,37,69,.08);
+
+  /* page chrome tokens — theme aware */
+  --page-bg:#EEF1F5; --page-fg:#17222E; --page-muted:#5C6B7C;
+  --page-card:#FFFFFF; --page-rule:#D8DFE7; --page-ink:#0B2545;
+
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page-bg:#0C141D; --page-fg:#E6ECF3; --page-muted:#93A3B4;
+    --page-card:#131E29; --page-rule:#24333F; --page-ink:#E6ECF3;
+  }
+}
+:root[data-theme="dark"]{
+  --page-bg:#0C141D; --page-fg:#E6ECF3; --page-muted:#93A3B4;
+  --page-card:#131E29; --page-rule:#24333F; --page-ink:#E6ECF3;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:calc(64px + env(safe-area-inset-top,0px));-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--page-bg); color:var(--page-fg);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;font-weight:700;letter-spacing:-.005em;margin:0}
+p{margin:0}
+a{color:inherit}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+:focus-visible{outline:2px solid var(--steel);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+/* ---------- page shell ---------- */
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px}
+.sheetnav{
+  position:sticky;top:0;z-index:60;background:var(--page-ink);color:#fff;
+  padding-top:env(safe-area-inset-top,0px);
+  border-bottom:1px solid rgba(255,255,255,.14);
+}
+:root[data-theme="dark"] .sheetnav,
+:root:not([data-theme="light"]) .sheetnav{background:#0B2545}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .sheetnav{background:#08192F}}
+.sheetnav .wrap{display:flex;align-items:center;gap:18px;height:56px}
+.brandmark{display:flex;align-items:center;gap:9px;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:17px;letter-spacing:.01em;white-space:nowrap}
+.brandmark .glyph{width:24px;height:24px;flex:none}
+.sheetnav nav{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.sheetnav nav::-webkit-scrollbar{display:none}
+.sheetnav nav a{
+  color:rgba(255,255,255,.72);text-decoration:none;font-size:13px;font-weight:500;
+  padding:7px 11px;border-radius:5px;white-space:nowrap;transition:background .15s,color .15s;
+}
+.sheetnav nav a:hover{background:rgba(255,255,255,.1);color:#fff}
+.themetog{
+  margin-left:6px;flex:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);
+  color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;display:grid;place-items:center;
+}
+.themetog:hover{background:rgba(255,255,255,.2)}
+
+/* ---------- title block masthead ---------- */
+.masthead{padding:44px 0 0}
+.tb{
+  background:var(--sheet);border:1.5px solid var(--ink);border-radius:2px;overflow:hidden;
+  box-shadow:var(--shadow);color:var(--text);
+}
+.tb-top{padding:26px 26px 22px;border-bottom:1.5px solid var(--ink);position:relative;overflow:hidden}
+.tb-top::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--steel-line) 1px,transparent 1px),linear-gradient(90deg,var(--steel-line) 1px,transparent 1px);
+  background-size:26px 26px;
+  -webkit-mask-image:linear-gradient(105deg,transparent 52%,#000 96%);
+  mask-image:linear-gradient(105deg,transparent 52%,#000 96%);
+}
+.tb-top > *{position:relative}
+.tb-kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel);letter-spacing:.07em;margin-bottom:12px}
+.tb h1{font-size:clamp(32px,5.4vw,54px);line-height:1.02;color:var(--ink);max-width:16ch}
+.tb-sub{margin-top:14px;font-size:16px;color:var(--muted);max-width:60ch}
+.tb-goals{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.goal{
+  display:inline-flex;align-items:center;gap:8px;background:var(--steel-soft);color:var(--ink-3);
+  border:1px solid var(--steel-line);border-radius:999px;padding:6px 14px 6px 10px;font-size:13px;font-weight:600;
+}
+.goal b{width:18px;height:18px;border-radius:50%;background:var(--ink-3);color:#fff;display:grid;place-items:center;font-size:10px;font-family:"IBM Plex Mono",monospace}
+.tb-grid{display:grid;grid-template-columns:repeat(5,1fr);background:var(--rule)}
+.tb-cell{background:var(--sheet);padding:12px 14px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.tb-cell dt{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.09em;color:var(--muted-2);text-transform:uppercase}
+.tb-cell dd{margin:0;font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:820px){.tb-grid{grid-template-columns:repeat(2,1fr)}}
+
+/* ---------- generic section ---------- */
+section{padding:56px 0 0}
+.sec-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:20px;flex-wrap:wrap}
+.sec-head h2{font-size:clamp(23px,3vw,31px);color:var(--page-ink);line-height:1.1}
+.sec-head .idx{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel);
+  border:1px solid var(--steel-line);background:var(--steel-soft);padding:3px 8px;border-radius:3px;flex:none;
+}
+.sec-head p{color:var(--page-muted);font-size:15px;max-width:66ch;flex:1 1 320px}
+.card{background:var(--page-card);border:1px solid var(--page-rule);border-radius:10px;box-shadow:var(--shadow-sm)}
+
+/* ---------- architecture ---------- */
+.arch{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;padding:8px;box-shadow:var(--shadow);overflow-x:auto}
+.arch svg{display:block;min-width:940px;width:100%;height:auto}
+.archnotes{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:14px}
+.note{background:var(--page-card);border:1px solid var(--page-rule);border-left:3px solid var(--steel);border-radius:8px;padding:13px 15px}
+.note.green{border-left-color:var(--ok)} .note.red{border-left-color:var(--stop)}
+.note h4{font-size:14.5px;color:var(--page-ink);margin-bottom:4px}
+.note p{font-size:13px;color:var(--page-muted);line-height:1.5}
+
+/* ---------- prototype shell ---------- */
+.proto-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.seg{display:inline-flex;background:var(--page-card);border:1px solid var(--page-rule);border-radius:8px;padding:3px;gap:2px}
+.seg button{
+  font:inherit;font-size:13px;font-weight:600;color:var(--page-muted);background:none;border:0;
+  padding:7px 14px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:7px;
+}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.proto-hint{font-size:12.5px;color:var(--page-muted);margin-left:auto}
+.frame{
+  background:var(--sheet);border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);
+}
+.chrome{display:flex;align-items:center;gap:8px;padding:9px 13px;background:#E7EBF0;border-bottom:1px solid var(--rule)}
+.dot{width:10px;height:10px;border-radius:50%;background:#C6CFD9}
+.urlbar{
+  flex:1;background:var(--sheet);border:1px solid var(--rule);border-radius:5px;padding:4px 10px;
+  font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:7px;min-width:0;
+}
+.urlbar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.app{display:grid;grid-template-columns:214px 1fr;height:700px;color:var(--text)}
+.app.noRail{grid-template-columns:1fr}
+
+/* rail */
+.rail{background:var(--ink);color:#B9CCE0;display:flex;flex-direction:column;overflow:hidden}
+.rail-brand{display:flex;align-items:center;gap:9px;padding:15px 16px;border-bottom:1px solid rgba(255,255,255,.1);color:#fff;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:16px}
+.rail-brand .glyph{width:22px;height:22px;flex:none}
+.rail-role{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.08em;background:rgba(255,255,255,.14);padding:2px 6px;border-radius:3px;color:#DCE8F4}
+.rail-nav{padding:10px 8px;display:flex;flex-direction:column;gap:1px;overflow-y:auto;flex:1}
+.rail-nav button{
+  font:inherit;font-size:13.5px;text-align:left;background:none;border:0;color:#B9CCE0;
+  padding:8px 10px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:10px;width:100%;
+}
+.rail-nav button:hover{background:rgba(255,255,255,.08);color:#fff}
+.rail-nav button[aria-current="true"]{background:var(--steel);color:#fff;font-weight:600}
+.rail-nav button svg{width:15px;height:15px;flex:none;opacity:.9}
+.rail-nav .pill{margin-left:auto;background:var(--stop);color:#fff;font-size:10.5px;font-weight:700;border-radius:999px;padding:1px 6px;font-family:"IBM Plex Mono",monospace}
+.rail-nav button[aria-current="true"] .pill{background:rgba(255,255,255,.25)}
+.rail-foot{border-top:1px solid rgba(255,255,255,.1);padding:11px 12px;display:flex;align-items:center;gap:9px;font-size:12.5px}
+.rail-foot .av{width:28px;height:28px;border-radius:6px;background:var(--steel);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none}
+.rail-foot .who{min-width:0;line-height:1.25}
+.rail-foot .who b{display:block;color:#fff;font-weight:600;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail-foot .who span{color:#8FA8C2;font-size:11px}
+
+/* workspace */
+.ws{background:var(--paper);overflow-y:auto;overflow-x:hidden;position:relative}
+.topbar{
+  position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(6px);
+  border-bottom:1px solid var(--rule);padding:12px 20px;display:flex;align-items:center;gap:14px;
+}
+.topbar h3{font-size:17px;color:var(--ink)}
+.crumb{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted-2)}
+.tb-actions{margin-left:auto;display:flex;align-items:center;gap:8px}
+.search{display:flex;align-items:center;gap:7px;background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:5px 10px;font-size:12.5px;color:var(--muted-2);min-width:150px}
+.iconbtn{position:relative;width:32px;height:32px;border-radius:6px;border:1px solid var(--rule);background:var(--sheet);display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.iconbtn:hover{border-color:var(--steel);color:var(--steel)}
+.iconbtn .dotred{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--stop);border:1.5px solid var(--sheet)}
+.pad{padding:20px}
+
+/* buttons + badges */
+.btn{font:inherit;font-size:13px;font-weight:600;border-radius:6px;padding:7px 13px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn.ghost{background:var(--sheet);color:var(--ink);border-color:var(--rule)}
+.btn.ghost:hover{border-color:var(--steel);color:var(--steel);background:var(--sheet)}
+.btn.sm{font-size:12px;padding:5px 10px}
+.btn svg{width:14px;height:14px}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2.5px 8px;border-radius:4px;border:1px solid;white-space:nowrap;line-height:1.5}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.b-ok{color:var(--ok);background:var(--ok-bg);border-color:var(--ok-line)}
+.b-warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
+.b-stop{color:var(--stop);background:var(--stop-bg);border-color:var(--stop-line)}
+.b-info{color:var(--ink-3);background:var(--steel-soft);border-color:var(--steel-line)}
+.b-grey{color:var(--muted);background:var(--paper);border-color:var(--rule)}
+.rev{font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;color:var(--ink-3);background:var(--steel-soft);border:1px solid var(--steel-line);border-radius:3px;padding:1px 6px;white-space:nowrap}
+
+/* stat tiles */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.stat{background:var(--sheet);border:1px solid var(--rule);border-radius:9px;padding:13px 15px;box-shadow:var(--shadow-sm);position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--steel)}
+.stat.g::after{background:var(--ok)} .stat.a::after{background:var(--warn)} .stat.r::after{background:var(--stop)}
+.stat dt{font-size:12px;color:var(--muted);font-weight:500;margin-bottom:6px}
+.stat dd{margin:0;font-family:"IBM Plex Sans Condensed",sans-serif;font-size:29px;font-weight:700;color:var(--ink);line-height:1}
+.stat .delta{font-size:11.5px;color:var(--muted-2);margin-top:5px;display:flex;align-items:center;gap:4px}
+.stat .delta.up{color:var(--ok)}
+
+/* panels */
+.grid2{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}
+.grid2.even{grid-template-columns:1fr 1fr}
+.panel{background:var(--sheet);border:1px solid var(--rule);border-radius:9px;box-shadow:var(--shadow-sm);overflow:hidden}
+.panel-h{display:flex;align-items:center;gap:10px;padding:11px 15px;border-bottom:1px solid var(--rule-2)}
+.panel-h h4{font-size:14.5px;color:var(--ink)}
+.panel-h .more{margin-left:auto;font-size:12px;color:var(--steel);font-weight:600;cursor:pointer}
+.panel-b{padding:14px 15px}
+.panel-b.flush{padding:0}
+
+/* tables */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{
+  text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted-2);font-weight:500;padding:9px 15px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap;
+}
+tbody td{padding:11px 15px;border-bottom:1px solid var(--rule-2);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#FAFCFE}
+td .name{font-weight:600;color:var(--ink);display:block}
+td .sub{font-size:11.5px;color:var(--muted-2);font-family:"IBM Plex Mono",monospace}
+.tbl-scroll{overflow-x:auto}
+.tbl-scroll table{min-width:620px}
+
+/* progress */
+.prog{display:flex;align-items:center;gap:9px;min-width:130px}
+.track{flex:1;height:6px;background:var(--rule-2);border-radius:99px;overflow:hidden;min-width:60px}
+.bar{height:100%;background:var(--steel);border-radius:99px}
+.bar.g{background:var(--ok)} .bar.a{background:var(--warn)}
+.prog b{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink);font-weight:600;min-width:34px;text-align:right}
+
+/* activity / feed */
+.feed{list-style:none;margin:0;padding:0}
+.feed li{display:flex;gap:11px;padding:11px 15px;border-bottom:1px solid var(--rule-2)}
+.feed li:last-child{border-bottom:0}
+.feed .ic{width:26px;height:26px;border-radius:6px;display:grid;place-items:center;flex:none;background:var(--steel-soft);color:var(--ink-3)}
+.feed .ic svg{width:14px;height:14px}
+.feed .ic.g{background:var(--ok-bg);color:var(--ok)} .feed .ic.a{background:var(--warn-bg);color:var(--warn)} .feed .ic.r{background:var(--stop-bg);color:var(--stop)}
+.feed .txt{font-size:13px;line-height:1.45;min-width:0}
+.feed .txt b{font-weight:600;color:var(--ink)}
+.feed time{display:block;font-size:11px;color:var(--muted-2);margin-top:2px;font-family:"IBM Plex Mono",monospace}
+.feed li.unread{background:#F7FBFF}
+
+/* timeline */
+.tl{list-style:none;margin:0;padding:4px 0}
+.tl li{display:flex;gap:13px;padding:0 15px;position:relative}
+.tl .mk{width:22px;flex:none;display:flex;flex-direction:column;align-items:center}
+.tl .mk i{width:20px;height:20px;border-radius:50%;border:2px solid var(--rule);background:var(--sheet);display:grid;place-items:center;flex:none;z-index:1}
+.tl .mk i svg{width:11px;height:11px}
+.tl .mk s{flex:1;width:2px;background:var(--rule);display:block}
+.tl li:last-child .mk s{display:none}
+.tl .body{padding:0 0 15px;min-width:0;flex:1;display:flex;gap:10px;align-items:baseline}
+.tl .body b{font-size:13.5px;font-weight:600;color:var(--muted-2)}
+.tl .body time{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted-2);white-space:nowrap}
+.tl li.done .mk i{border-color:var(--ok);background:var(--ok);color:#fff}
+.tl li.done .mk s{background:var(--ok)}
+.tl li.done .body b{color:var(--text)}
+.tl li.now .mk i{border-color:var(--steel);background:var(--steel);color:#fff;box-shadow:0 0 0 4px var(--steel-soft)}
+.tl li.now .body b{color:var(--ink);font-weight:700}
+.tl li.now .body time{color:var(--steel);font-weight:600}
+
+/* horizontal stage strip */
+.stagestrip{display:flex;gap:2px;overflow-x:auto;padding:2px 0 10px}
+.stg{flex:1;min-width:104px;background:var(--sheet);border:1px solid var(--rule);border-radius:6px;padding:9px 11px}
+.stg .n{font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:var(--muted-2)}
+.stg .t{font-size:12px;font-weight:600;color:var(--muted);margin-top:3px;line-height:1.3}
+.stg.done{background:var(--ok-bg);border-color:var(--ok-line)} .stg.done .t{color:var(--ok)} .stg.done .n{color:var(--ok)}
+.stg.now{background:var(--ink);border-color:var(--ink)} .stg.now .t{color:#fff} .stg.now .n{color:#9FC0E0}
+
+/* tabs */
+.tabs{display:flex;gap:18px;padding:0 20px;border-bottom:1px solid var(--rule);background:var(--sheet);overflow-x:auto}
+.tabs button{font:inherit;font-size:13.5px;font-weight:500;color:var(--muted);background:none;border:0;border-bottom:2px solid transparent;padding:11px 0;cursor:pointer;white-space:nowrap}
+.tabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--steel)}
+
+/* viewer */
+.viewer{display:grid;grid-template-columns:1fr 300px;gap:0;height:100%;background:var(--sheet)}
+.vmain{display:flex;flex-direction:column;background:#2A3742;min-width:0}
+.vtool{display:flex;align-items:center;gap:8px;padding:8px 12px;background:#202B34;border-bottom:1px solid #16202A;color:#C9D4DE;font-size:12px;flex-wrap:wrap}
+.vtool .grp{display:flex;align-items:center;gap:2px;background:#2A3742;border-radius:6px;padding:2px}
+.vtool button{font:inherit;background:none;border:0;color:#C9D4DE;width:26px;height:24px;border-radius:4px;cursor:pointer;display:grid;place-items:center}
+.vtool button:hover{background:#3A4A57;color:#fff}
+.vtool button.on{background:var(--steel);color:#fff}
+.vtool .pg{font-family:"IBM Plex Mono",monospace;font-size:11.5px;padding:0 6px}
+.vtool .docname{font-weight:600;color:#fff;font-size:12.5px;margin-right:auto;display:flex;align-items:center;gap:8px}
+.vstage{flex:1;overflow:auto;display:grid;place-items:center;padding:16px}
+.vside{border-left:1px solid var(--rule);display:flex;flex-direction:column;background:var(--sheet);overflow-y:auto}
+.vside-h{padding:13px 15px;border-bottom:1px solid var(--rule-2)}
+.vside-h h4{font-size:14.5px;color:var(--ink)}
+.vside-h p{font-size:11.5px;color:var(--muted-2);font-family:"IBM Plex Mono",monospace;margin-top:2px}
+.radios{display:flex;flex-direction:column;gap:7px;padding:13px 15px}
+.radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--rule);border-radius:7px;padding:9px 11px;cursor:pointer;background:var(--sheet)}
+.radio input{margin:2px 0 0;accent-color:var(--steel);flex:none}
+.radio .rt{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
+.radio .rd{font-size:11.5px;color:var(--muted-2);line-height:1.35;margin-top:2px}
+.radio:hover{border-color:var(--steel-line);background:#FAFCFE}
+.radio.sel-ok{border-color:var(--ok-line);background:var(--ok-bg)} .radio.sel-ok .rt{color:var(--ok)}
+.radio.sel-warn{border-color:var(--warn-line);background:var(--warn-bg)} .radio.sel-warn .rt{color:var(--warn)}
+.radio.sel-stop{border-color:var(--stop-line);background:var(--stop-bg)} .radio.sel-stop .rt{color:var(--stop)}
+.field{padding:0 15px 13px}
+.field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+.ta{width:100%;min-height:76px;border:1px solid var(--rule);border-radius:7px;padding:9px 11px;font:inherit;font-size:12.5px;color:var(--text);resize:vertical;background:var(--sheet)}
+.ta::placeholder{color:var(--muted-2)}
+.ta:focus{outline:2px solid var(--steel);outline-offset:-1px;border-color:var(--steel)}
+
+/* pins */
+.sheetwrap{position:relative;background:#fff;box-shadow:0 10px 34px rgba(0,0,0,.42);max-width:100%}
+.sheetwrap svg{display:block;width:100%;height:auto}
+.pin{
+  position:absolute;width:23px;height:23px;border-radius:50% 50% 50% 2px;transform:translate(-50%,-100%) rotate(-45deg);
+  background:var(--stop);color:#fff;border:2px solid #fff;display:grid;place-items:center;cursor:pointer;
+  box-shadow:0 2px 6px rgba(0,0,0,.35);
+}
+.pin span{transform:rotate(45deg);font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:700}
+.pin.ok{background:var(--ok)}
+.pin.sel{outline:3px solid rgba(45,108,168,.55)}
+.pincall{
+  position:absolute;transform:translate(0,-50%);background:#fff;border:1px solid var(--stop-line);border-left:3px solid var(--stop);
+  border-radius:6px;padding:7px 10px;width:186px;font-size:11.5px;line-height:1.4;color:var(--text);box-shadow:0 4px 14px rgba(0,0,0,.24);
+}
+.pincall b{display:block;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--stop);margin-bottom:2px}
+
+/* comment list */
+.cmt{border-bottom:1px solid var(--rule-2);padding:11px 15px;display:flex;gap:10px;cursor:pointer}
+.cmt:hover{background:#FAFCFE}
+.cmt .num{width:21px;height:21px;border-radius:50%;background:var(--stop);color:#fff;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:700;display:grid;place-items:center;flex:none}
+.cmt .num.ok{background:var(--ok)}
+.cmt .c-b{min-width:0;flex:1}
+.cmt .c-m{display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}
+.cmt .c-m b{font-size:12.5px;color:var(--ink)}
+.cmt .c-m .loc{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--steel);background:var(--steel-soft);border-radius:3px;padding:0 5px}
+.cmt p{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.cmt time{font-size:10.5px;color:var(--muted-2);font-family:"IBM Plex Mono",monospace}
+
+/* chat */
+.chat{display:grid;grid-template-columns:250px 1fr;height:100%;background:var(--sheet)}
+.threads{border-right:1px solid var(--rule);overflow-y:auto;background:var(--paper)}
+.thread{padding:12px 14px;border-bottom:1px solid var(--rule-2);cursor:pointer;display:flex;gap:10px}
+.thread:hover{background:var(--sheet)}
+.thread[aria-current="true"]{background:var(--sheet);box-shadow:inset 3px 0 0 var(--steel)}
+.thread .av{width:30px;height:30px;border-radius:7px;background:var(--ink-3);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none;font-family:"IBM Plex Mono",monospace}
+.thread .tb2{min-width:0;flex:1}
+.thread .tn{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.thread .tp{font-size:11.5px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.thread .cnt{background:var(--steel);color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px;align-self:center;font-family:"IBM Plex Mono",monospace}
+.convo{display:flex;flex-direction:column;min-width:0}
+.convo-h{padding:11px 16px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:10px}
+.convo-h h4{font-size:14.5px;color:var(--ink)}
+.convo-h .sub{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted-2)}
+.msgs{flex:1;overflow-y:auto;padding:16px;background:var(--paper);display:flex;flex-direction:column;gap:12px}
+.daysep{text-align:center;font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted-2);position:relative}
+.daysep span{background:var(--paper);padding:0 10px;position:relative;z-index:1}
+.daysep::before{content:"";position:absolute;left:0;right:0;top:50%;height:1px;background:var(--rule)}
+.msg{display:flex;gap:9px;max-width:80%}
+.msg .av{width:28px;height:28px;border-radius:7px;background:var(--ink-3);color:#fff;font-size:10px;font-weight:700;display:grid;place-items:center;flex:none;font-family:"IBM Plex Mono",monospace}
+.bub{background:var(--sheet);border:1px solid var(--rule);border-radius:3px 9px 9px 9px;padding:9px 12px;font-size:13px;line-height:1.5;box-shadow:var(--shadow-sm)}
+.bub .who{font-size:11.5px;font-weight:700;color:var(--ink-3);margin-bottom:3px;display:flex;gap:7px;align-items:baseline}
+.bub .who time{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted-2);font-weight:400}
+.msg.me{align-self:flex-end;flex-direction:row-reverse}
+.msg.me .bub{background:var(--ink);color:#EAF2FA;border-color:var(--ink);border-radius:9px 3px 9px 9px}
+.msg.me .bub .who{color:#9FC0E0} .msg.me .bub .who time{color:#7E9DBC}
+.msg.me .av{background:var(--steel)}
+.attach{display:flex;align-items:center;gap:9px;margin-top:7px;background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:7px 9px}
+.msg.me .attach{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2)}
+.attach .ft{font-family:"IBM Plex Mono",monospace;font-size:9px;font-weight:700;background:var(--stop);color:#fff;border-radius:3px;padding:2px 5px;flex:none}
+.attach .fi{min-width:0;font-size:12px;line-height:1.3}
+.attach .fi b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attach .fi span{font-size:10.5px;opacity:.7;font-family:"IBM Plex Mono",monospace}
+.reads{font-size:10px;color:var(--muted-2);font-family:"IBM Plex Mono",monospace;margin-top:4px;text-align:right;display:flex;gap:4px;justify-content:flex-end;align-items:center}
+.composer{border-top:1px solid var(--rule);padding:11px 14px;display:flex;gap:9px;align-items:center;background:var(--sheet)}
+.composer input{flex:1;border:1px solid var(--rule);border-radius:7px;padding:9px 12px;font:inherit;font-size:13px;min-width:0}
+.composer input:focus{outline:2px solid var(--steel);outline-offset:-1px}
+.send{width:36px;height:36px;border-radius:7px;background:var(--ink);color:#fff;border:0;display:grid;place-items:center;cursor:pointer;flex:none}
+.send:hover{background:var(--steel)}
+
+/* auth */
+.authgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.authcard{background:var(--sheet);border:1px solid var(--rule);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column}
+.authcard > .cap{background:var(--ink);color:#DCE8F4;padding:8px 14px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px}
+.authcard > .cap span{font-family:"IBM Plex Mono",monospace;font-size:10px;background:rgba(255,255,255,.16);border-radius:3px;padding:1px 6px}
+.authbody{padding:22px 20px;flex:1;display:flex;flex-direction:column;gap:13px;color:var(--text)}
+.authbody h4{font-size:18px;color:var(--ink)}
+.authbody > p{font-size:12.5px;color:var(--muted);line-height:1.5}
+.inp{border:1px solid var(--rule);border-radius:7px;padding:9px 11px;font-size:13px;color:var(--muted-2);background:var(--sheet)}
+.inp.filled{color:var(--text);font-weight:500}
+.inp-l{font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:5px;display:block}
+.meter{display:flex;gap:4px;margin-top:7px}
+.meter i{height:4px;flex:1;border-radius:99px;background:var(--rule-2)}
+.meter i.on{background:var(--ok)}
+.reqs{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:4px}
+.reqs li{font-size:11.5px;color:var(--muted);display:flex;gap:7px;align-items:center}
+.reqs li svg{width:12px;height:12px;color:var(--ok);flex:none}
+.mail{border:1px solid var(--rule);border-radius:8px;overflow:hidden}
+.mail-h{background:var(--paper);padding:9px 12px;border-bottom:1px solid var(--rule);font-size:11.5px;color:var(--muted);font-family:"IBM Plex Mono",monospace}
+.mail-b{padding:14px 13px;font-size:12.5px;line-height:1.55;color:var(--text)}
+
+/* storage / data model */
+.tree{font-family:"IBM Plex Mono",monospace;font-size:12.5px;line-height:1.85;color:var(--text);margin:0;white-space:pre;overflow-x:auto}
+.tree .d{color:var(--ink-3);font-weight:600}
+.tree .c{color:var(--muted-2)}
+.chain{display:flex;align-items:center;gap:0;flex-wrap:wrap;margin-top:4px}
+.chain .r{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;border:1px solid var(--rule);background:var(--sheet);border-radius:5px;padding:5px 10px;color:var(--muted)}
+.chain .r.cur{border-color:var(--ink);background:var(--ink);color:#fff}
+.chain .ar{color:var(--muted-2);padding:0 7px;font-size:12px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:0;font-size:13px;border-top:1px solid var(--rule-2)}
+.kv dt{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);padding:7px 14px 7px 0;border-bottom:1px solid var(--rule-2);white-space:nowrap}
+.kv dd{margin:0;padding:7px 0;border-bottom:1px solid var(--rule-2);color:var(--muted);font-size:12.5px;text-align:right}
+.seclist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:1px;background:var(--page-rule);border:1px solid var(--page-rule);border-radius:9px;overflow:hidden}
+.seclist li{background:var(--page-card);padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.seclist li svg{width:15px;height:15px;color:var(--ok);flex:none;margin-top:2px}
+.seclist b{font-size:13px;font-weight:600;color:var(--page-ink);display:block}
+.seclist span{font-size:11.5px;color:var(--page-muted);line-height:1.45}
+
+/* footer */
+footer{margin-top:60px;border-top:1px solid var(--page-rule);padding:26px 0 44px;color:var(--page-muted);font-size:12.5px}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+footer .mono{font-size:11px}
+
+/* responsive */
+@media (max-width:1040px){
+  .grid2,.grid2.even{grid-template-columns:1fr}
+  .viewer{grid-template-columns:1fr 268px}
+  .authgrid{grid-template-columns:1fr}
+}
+@media (max-width:860px){
+  .app{grid-template-columns:62px 1fr;height:640px}
+  .rail-brand span.nm,.rail-nav button span.lb,.rail-foot .who,.rail-role{display:none}
+  .rail-nav button{justify-content:center;padding:9px 0}
+  .rail-brand{justify-content:center;padding:15px 0}
+  .rail-foot{justify-content:center}
+  .viewer{grid-template-columns:1fr;grid-template-rows:280px 1fr}
+  .vside{border-left:0;border-top:1px solid var(--rule)}
+  .chat{grid-template-columns:1fr}
+  .threads{display:none}
+  .search{display:none}
+}
+@media (max-width:620px){
+  .wrap{padding:0 14px}
+  .app{height:560px}
+  .pad{padding:14px}
+  .topbar{padding:10px 14px}
+  .topbar h3{font-size:15px}
+  .crumb{display:none}
+}
+</style>
+</head>
+<body>
+<style>
+svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+<defs>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20c0-3.3 2.9-5.5 6.5-5.5s6.5 2.2 6.5 5.5"/><path d="M17 5.5a3 3 0 0 1 0 5.6M18.5 14.6c2 .8 3.2 2.5 3.2 4.6"/></symbol>
+<symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></symbol>
+<symbol id="i-review" viewBox="0 0 24 24"><path d="M20 12V5a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6"/><path d="M8 8h8M8 12h5"/><path d="m15.5 18.5 2 2 4-4.5"/></symbol>
+<symbol id="i-msg" viewBox="0 0 24 24"><path d="M21 12a7.5 7.5 0 0 1-7.5 7.5H7L3 22l1.3-3.7A7.5 7.5 0 0 1 10.5 4.5h3A7.5 7.5 0 0 1 21 12z"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M18 9a6 6 0 1 0-12 0c0 5-2 6-2 6h16s-2-1-2-6"/><path d="M13.7 20a2 2 0 0 1-3.4 0"/></symbol>
+<symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V4M4 20h16"/><rect x="7.5" y="12" width="3" height="5"/><rect x="13" y="8" width="3" height="9"/><rect x="18" y="14" width="3" height="3"/></symbol>
+<symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 14.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.2l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.2-2.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 2.9-1.2V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0 1.2 2.9H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5.9z"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20.5c0-3.7 3.4-6 7.5-6s7.5 2.3 7.5 6"/></symbol>
+<symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 8 6 12l4 4M6 12h9"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/><path d="M4 20h16"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v13M6.5 12.5 12 18l5.5-5.5"/><path d="M4 21h16"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+<symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.2 2"/></symbol>
+<symbol id="i-edit" viewBox="0 0 24 24"><path d="M16.5 4.5 19.5 7.5 9 18l-4 1 1-4z"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 3 10.5l7 3 3 7z"/><path d="m10 13.5 4-4"/></symbol>
+<symbol id="i-clip" viewBox="0 0 24 24"><path d="M20 11.5 12 19.5a4.5 4.5 0 0 1-6.4-6.4l8.5-8.5a3 3 0 0 1 4.3 4.3l-8.5 8.5a1.5 1.5 0 0 1-2.2-2.1l7.8-7.8"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10" width="15" height="10.5" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v6c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s6.5-6 6.5-10.5a6.5 6.5 0 0 0-13 0C5.5 15 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/></symbol>
+<symbol id="i-zin" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M11 8.5v5M8.5 11h5M20 20l-4.2-4.2"/></symbol>
+<symbol id="i-zout" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M8.5 11h5M20 20l-4.2-4.2"/></symbol>
+<symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"/></symbol>
+<symbol id="i-chevL" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+<symbol id="i-chevR" viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+<symbol id="i-beam" viewBox="0 0 24 24"><path d="M3 5h18M3 19h18M10.5 5v14M13.5 5v14"/></symbol>
+</defs>
+</svg>
+
+<header class="sheetnav">
+  <div class="wrap">
+    <span class="brandmark">
+      <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2.5 4.5h19M2.5 19.5h19M9.6 4.5v15M14.4 4.5v15"/><path d="m2.5 4.5 19 15" stroke-dasharray="2.4 2.4" opacity=".55"/></svg>
+      SteelPro Portal
+    </span>
+    <nav>
+      <a href="#architecture">Architecture</a>
+      <a href="#prototype">Portals</a>
+      <a href="#review">Document review</a>
+      <a href="#auth">Access &amp; onboarding</a>
+      <a href="#storage">Storage model</a>
+      <a href="#security">Security</a>
+    </nav>
+    <button class="themetog" id="themeBtn" title="Switch theme" aria-label="Switch colour theme"><svg class="i" style="font-size:16px"><use href="#i-sun"/></svg></button>
+  </div>
+</header>
+
+<div class="wrap masthead">
+  <div class="tb">
+    <div class="tb-top">
+      <div class="tb-kicker">Interface &amp; system design · Issued for review</div>
+      <h1>A client portal built the way a drawing office works</h1>
+      <p class="tb-sub">Two portals on one backend for a steel detailing and fabrication practice. Application on a hardened VPS, every drawing kept on the company's own Windows file server, reached only through an encrypted tunnel.</p>
+      <div class="tb-goals">
+        <span class="goal"><b>1</b> Track project progress</span>
+        <span class="goal"><b>2</b> Review &amp; approve drawings</span>
+        <span class="goal"><b>3</b> Talk to the detailer</span>
+      </div>
+    </div>
+    <dl class="tb-grid">
+      <div class="tb-cell"><dt>Document</dt><dd>System design pack</dd></div>
+      <div class="tb-cell"><dt>Portals</dt><dd>PM &amp; Client</dd></div>
+      <div class="tb-cell"><dt>Stack</dt><dd>React · Node · Postgres</dd></div>
+      <div class="tb-cell"><dt>File store</dt><dd>Windows Server (VPN)</dd></div>
+      <div class="tb-cell"><dt>Revision</dt><dd>R1 — 21 Sep 2026</dd></div>
+    </dl>
+  </div>
+</div>
+
+<section id="architecture" class="wrap">
+  <div class="sec-head">
+    <span class="idx">A</span>
+    <h2>System architecture</h2>
+    <p>Public traffic never reaches the file server. The backend authorises the request first, then pulls the file across the VPN and streams it to the browser. SMB stays inside the company network.</p>
+  </div>
+
+  <div class="arch">
+    <svg viewBox="0 0 1200 600" role="img" aria-label="Architecture: browsers over HTTPS to a VPS running Nginx, React, Node and PostgreSQL, then over an encrypted VPN through the company firewall to a Windows file server.">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#2D6CA8"/></marker>
+        <marker id="arg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#16794A"/></marker>
+        <pattern id="bp" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0v24" fill="none" stroke="#E4EBF2" stroke-width="1"/></pattern>
+      </defs>
+      <rect x="0" y="0" width="1200" height="600" fill="url(#bp)" opacity=".7"/>
+      <g font-family="IBM Plex Sans, sans-serif">
+
+        <!-- users -->
+        <g>
+          <rect x="16" y="40" width="182" height="188" rx="9" fill="#fff" stroke="#BBD3E9" stroke-width="1.5"/>
+          <rect x="16" y="40" width="182" height="30" rx="9" fill="#E9F1F9"/><rect x="16" y="58" width="182" height="12" fill="#E9F1F9"/>
+          <text x="34" y="60" font-size="13.5" font-weight="700" fill="#0B2545">Client (external)</text>
+          <text x="34" y="92" font-size="12" fill="#5C6B7C">Track progress</text>
+          <text x="34" y="113" font-size="12" fill="#5C6B7C">Review &amp; mark up drawings</text>
+          <text x="34" y="134" font-size="12" fill="#5C6B7C">Approve or request revision</text>
+          <text x="34" y="155" font-size="12" fill="#5C6B7C">Chat with the project team</text>
+          <text x="34" y="176" font-size="12" fill="#5C6B7C">Receive notifications</text>
+          <rect x="34" y="190" width="146" height="24" rx="5" fill="#F3F5F8" stroke="#D8DFE7"/>
+          <text x="46" y="206" font-size="11" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">Browser · React SPA</text>
+        </g>
+        <g>
+          <rect x="16" y="252" width="182" height="188" rx="9" fill="#fff" stroke="#BBD3E9" stroke-width="1.5"/>
+          <rect x="16" y="252" width="182" height="30" rx="9" fill="#E9F1F9"/><rect x="16" y="270" width="182" height="12" fill="#E9F1F9"/>
+          <text x="34" y="272" font-size="13.5" font-weight="700" fill="#0B2545">PM &amp; drawing office</text>
+          <text x="34" y="304" font-size="12" fill="#5C6B7C">Manage clients &amp; projects</text>
+          <text x="34" y="325" font-size="12" fill="#5C6B7C">Upload drawings &amp; revisions</text>
+          <text x="34" y="346" font-size="12" fill="#5C6B7C">Issue for client review</text>
+          <text x="34" y="367" font-size="12" fill="#5C6B7C">Answer comments</text>
+          <text x="34" y="388" font-size="12" fill="#5C6B7C">Reports &amp; audit trail</text>
+          <rect x="34" y="402" width="146" height="24" rx="5" fill="#F3F5F8" stroke="#D8DFE7"/>
+          <text x="46" y="418" font-size="11" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">Browser · React SPA</text>
+        </g>
+
+        <!-- internet -->
+        <g>
+          <path d="M232 214c-12 0-22 10-22 22s10 22 22 22h64c13 0 23-10 23-23s-10-23-23-23c-3-13-14-22-28-22-17 0-30 12-30 26z" fill="#E9F1F9" stroke="#BBD3E9" stroke-width="1.5"/>
+          <text x="264" y="245" font-size="12.5" font-weight="700" fill="#1B4B7A" text-anchor="middle">Internet</text>
+          <text x="264" y="290" font-size="11" font-family="IBM Plex Mono, monospace" fill="#2D6CA8" text-anchor="middle">HTTPS · 443</text>
+          <text x="264" y="308" font-size="11" font-family="IBM Plex Mono, monospace" fill="#5C6B7C" text-anchor="middle">TLS 1.3 · HSTS</text>
+        </g>
+        <path d="M198 134 H228" stroke="#2D6CA8" stroke-width="1.8" marker-end="url(#ar)" marker-start="url(#ar)" fill="none"/>
+        <path d="M198 346 H228" stroke="#2D6CA8" stroke-width="1.8" marker-end="url(#ar)" marker-start="url(#ar)" fill="none"/>
+        <path d="M228 134 V214" stroke="#2D6CA8" stroke-width="1.8" fill="none"/>
+        <path d="M228 346 V258" stroke="#2D6CA8" stroke-width="1.8" fill="none"/>
+        <path d="M319 236 H352" stroke="#2D6CA8" stroke-width="1.8" marker-end="url(#ar)" fill="none"/>
+
+        <!-- VPS -->
+        <rect x="352" y="24" width="390" height="500" rx="12" fill="#F7FAFD" stroke="#2D6CA8" stroke-width="1.5" stroke-dasharray="6 4"/>
+        <text x="372" y="50" font-size="14" font-weight="700" fill="#0B2545">VPS / cloud server</text>
+        <text x="372" y="68" font-size="11" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">Ubuntu LTS · public IP · ufw + fail2ban</text>
+
+        <rect x="372" y="84" width="350" height="44" rx="7" fill="#fff" stroke="#16794A" stroke-width="1.5"/>
+        <text x="388" y="103" font-size="12.5" font-weight="700" fill="#16794A">Nginx reverse proxy</text>
+        <text x="388" y="119" font-size="10.5" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">TLS termination · rate limiting · static assets</text>
+
+        <path d="M432 128 V156" stroke="#2D6CA8" stroke-width="1.6" marker-end="url(#ar)" fill="none"/>
+        <path d="M640 128 V156" stroke="#2D6CA8" stroke-width="1.6" marker-end="url(#ar)" fill="none"/>
+
+        <rect x="372" y="156" width="168" height="168" rx="8" fill="#fff" stroke="#BBD3E9" stroke-width="1.5"/>
+        <text x="386" y="178" font-size="12.5" font-weight="700" fill="#0B2545">React + TypeScript</text>
+        <text x="386" y="194" font-size="10.5" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">Frontend</text>
+        <text x="386" y="216" font-size="11.5" fill="#5C6B7C">Client portal UI</text>
+        <text x="386" y="235" font-size="11.5" fill="#5C6B7C">PM portal UI</text>
+        <text x="386" y="254" font-size="11.5" fill="#5C6B7C">PDF viewer + markup</text>
+        <text x="386" y="273" font-size="11.5" fill="#5C6B7C">Socket.IO client</text>
+        <text x="386" y="292" font-size="11.5" fill="#5C6B7C">Responsive layouts</text>
+        <text x="386" y="311" font-size="11.5" fill="#5C6B7C">Role-aware routing</text>
+
+        <rect x="554" y="156" width="168" height="168" rx="8" fill="#fff" stroke="#BBD3E9" stroke-width="1.5"/>
+        <text x="568" y="178" font-size="12.5" font-weight="700" fill="#0B2545">Node + TypeScript</text>
+        <text x="568" y="194" font-size="10.5" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">Backend API</text>
+        <text x="568" y="216" font-size="11.5" fill="#5C6B7C">JWT + refresh tokens</text>
+        <text x="568" y="235" font-size="11.5" fill="#5C6B7C">RBAC &amp; project scoping</text>
+        <text x="568" y="254" font-size="11.5" fill="#5C6B7C">Document service</text>
+        <text x="568" y="273" font-size="11.5" fill="#5C6B7C">Review &amp; comments</text>
+        <text x="568" y="292" font-size="11.5" fill="#5C6B7C">Chat &amp; notifications</text>
+        <text x="568" y="311" font-size="11.5" fill="#5C6B7C">AV scan · audit log</text>
+
+        <path d="M540 240 H554" stroke="#2D6CA8" stroke-width="1.6" marker-end="url(#ar)" marker-start="url(#ar)" fill="none"/>
+        <path d="M638 324 V356" stroke="#2D6CA8" stroke-width="1.6" marker-end="url(#ar)" marker-start="url(#ar)" fill="none"/>
+
+        <rect x="372" y="356" width="350" height="118" rx="8" fill="#fff" stroke="#1B4B7A" stroke-width="1.5"/>
+        <text x="388" y="378" font-size="12.5" font-weight="700" fill="#0B2545">PostgreSQL</text>
+        <text x="388" y="399" font-size="11.5" fill="#5C6B7C">users · clients · projects · stages</text>
+        <text x="388" y="418" font-size="11.5" fill="#5C6B7C">documents (metadata) · revisions</text>
+        <text x="388" y="437" font-size="11.5" fill="#5C6B7C">reviews · comments · markup pins</text>
+        <text x="388" y="456" font-size="11.5" fill="#5C6B7C">messages · notifications · audit_log</text>
+        <rect x="372" y="484" width="350" height="26" rx="5" fill="#E9F1F9" stroke="#BBD3E9"/>
+        <text x="388" y="501" font-size="11" font-weight="600" fill="#1B4B7A">Metadata and file paths only — never file bytes</text>
+
+        <!-- VPN -->
+        <path d="M742 240 H856" stroke="#16794A" stroke-width="2.2" marker-end="url(#arg)" marker-start="url(#arg)" fill="none"/>
+        <rect x="754" y="186" width="90" height="42" rx="7" fill="#E3F2EA" stroke="#16794A" stroke-width="1.5"/>
+        <text x="799" y="203" font-size="11.5" font-weight="700" fill="#16794A" text-anchor="middle">Encrypted</text>
+        <text x="799" y="219" font-size="11.5" font-weight="700" fill="#16794A" text-anchor="middle">VPN tunnel</text>
+        <text x="799" y="270" font-size="10.5" font-family="IBM Plex Mono, monospace" fill="#16794A" text-anchor="middle">WireGuard / IPsec</text>
+        <text x="799" y="288" font-size="10.5" font-family="IBM Plex Mono, monospace" fill="#5C6B7C" text-anchor="middle">SMB stays inside</text>
+
+        <!-- firewall -->
+        <rect x="856" y="156" width="112" height="168" rx="8" fill="#FAE9E7" stroke="#B3312A" stroke-width="1.5"/>
+        <text x="912" y="182" font-size="12.5" font-weight="700" fill="#B3312A" text-anchor="middle">Company</text>
+        <text x="912" y="199" font-size="12.5" font-weight="700" fill="#B3312A" text-anchor="middle">firewall</text>
+        <text x="872" y="226" font-size="11" fill="#7A3B36">Terminates VPN</text>
+        <text x="872" y="246" font-size="11" fill="#7A3B36">Allows tunnel only</text>
+        <text x="872" y="266" font-size="11" fill="#7A3B36">Blocks inbound</text>
+        <text x="872" y="286" font-size="11" fill="#7A3B36">from internet</text>
+        <text x="872" y="306" font-size="11" fill="#7A3B36">Logs all traffic</text>
+        <path d="M968 240 H996" stroke="#16794A" stroke-width="2.2" marker-end="url(#arg)" marker-start="url(#arg)" fill="none"/>
+
+        <!-- company network -->
+        <rect x="996" y="24" width="188" height="500" rx="12" fill="#F4FBF7" stroke="#16794A" stroke-width="1.5"/>
+        <text x="1014" y="50" font-size="13.5" font-weight="700" fill="#0B2545">Company network</text>
+        <text x="1014" y="68" font-size="11" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">Internal · not routable</text>
+        <rect x="1014" y="82" width="152" height="46" rx="7" fill="#fff" stroke="#16794A" stroke-width="1.5"/>
+        <text x="1028" y="101" font-size="12.5" font-weight="700" fill="#0B2545">Windows file server</text>
+        <text x="1028" y="118" font-size="10.5" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">File storage only</text>
+        <rect x="1014" y="142" width="152" height="264" rx="7" fill="#fff" stroke="#D8DFE7"/>
+        <g font-family="IBM Plex Mono, monospace" font-size="10.5" fill="#17222E">
+          <text x="1026" y="162" fill="#1B4B7A" font-weight="600">D:\CompanyPortalFiles\</text>
+          <text x="1034" y="180">└ Clients\</text>
+          <text x="1042" y="198">└ Client-001\</text>
+          <text x="1050" y="216">└ Projects\</text>
+          <text x="1058" y="234">└ Project-001\</text>
+          <text x="1066" y="252">├ Drawings\</text>
+          <text x="1066" y="270">├ Documents\</text>
+          <text x="1066" y="288">├ Revisions\</text>
+          <text x="1066" y="306">├ Client-Review\</text>
+          <text x="1066" y="324">└ Approved\</text>
+          <text x="1042" y="348">└ Client-002\</text>
+          <text x="1034" y="372">└ Temp\</text>
+          <text x="1034" y="394" fill="#5C6B7C">(AV scan staging)</text>
+        </g>
+        <rect x="1014" y="420" width="152" height="86" rx="7" fill="#E3F2EA" stroke="#16794A" stroke-width="1.2"/>
+        <text x="1026" y="440" font-size="11" font-weight="700" fill="#16794A">Files live here only</text>
+        <text x="1026" y="459" font-size="10.5" fill="#2F6B52">PDF · DWG · DXF · XLSX</text>
+        <text x="1026" y="476" font-size="10.5" fill="#2F6B52">images · revisions</text>
+        <text x="1026" y="495" font-size="10.5" fill="#2F6B52">No port 445 on WAN</text>
+
+        <!-- flow caption -->
+        <rect x="352" y="540" width="832" height="44" rx="7" fill="#fff" stroke="#D8DFE7"/>
+        <text x="372" y="559" font-size="11.5" font-weight="600" fill="#0B2545">Download path</text>
+        <text x="372" y="576" font-size="11" font-family="IBM Plex Mono, monospace" fill="#5C6B7C">GET /api/documents/:id/file → verify JWT → check project + document ACL → read path from Postgres → fetch over VPN → stream to browser → write audit_log</text>
+      </g>
+    </svg>
+  </div>
+
+  <div class="archnotes">
+    <div class="note"><h4>Postgres holds the index, not the drawings</h4><p>Document ID, project ID, file name, type, revision, status, path, uploaded by, upload date, review status. A row is worth a few hundred bytes; the DWG behind it stays on the file server.</p></div>
+    <div class="note green"><h4>Files only move through the tunnel</h4><p>The VPS mounts nothing permanently. Each read is an authorised, logged fetch over WireGuard, with the resolved path built by the app rather than sent by the browser.</p></div>
+    <div class="note red"><h4>Nothing inbound to the file server</h4><p>The firewall accepts the tunnel and nothing else. SMB/445 is never published, and a stolen session token still cannot reach a path outside its own project folder.</p></div>
+  </div>
+</section>
+<style>
+.ws{display:flex;flex-direction:column;overflow:hidden}
+.screen{display:none}
+.screen.on{display:flex;flex-direction:column;height:100%;min-height:0}
+.sbody{flex:1;overflow-y:auto;overflow-x:hidden;min-height:0}
+.sbody.nos{overflow:hidden}
+.rolewrap{display:none}
+.rolewrap.on{display:block}
+.mini{display:flex;gap:9px;align-items:center}
+.mini .av{width:30px;height:30px;border-radius:7px;background:var(--steel-soft);color:var(--ink-3);display:grid;place-items:center;font-family:"IBM Plex Mono",monospace;font-size:11px;font-weight:700;flex:none;border:1px solid var(--steel-line)}
+.empty{padding:26px;text-align:center;color:var(--muted)}
+.settingrow{display:flex;gap:14px;align-items:center;padding:13px 15px;border-bottom:1px solid var(--rule-2)}
+.settingrow:last-child{border-bottom:0}
+.settingrow .sr-t{font-size:13.5px;font-weight:600;color:var(--ink)}
+.settingrow .sr-d{font-size:12px;color:var(--muted);line-height:1.4}
+.settingrow .sw{margin-left:auto;width:38px;height:21px;border-radius:99px;background:var(--ok);position:relative;flex:none}
+.settingrow .sw::after{content:"";position:absolute;top:2.5px;right:2.5px;width:16px;height:16px;border-radius:50%;background:#fff}
+.settingrow .sw.off{background:var(--rule)}
+.settingrow .sw.off::after{right:auto;left:2.5px}
+.bars{display:flex;align-items:flex-end;gap:10px;height:130px;padding:6px 0}
+.bars .col{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end}
+.bars .col i{width:100%;max-width:34px;background:var(--steel);border-radius:3px 3px 0 0;display:block}
+.bars .col i.g{background:var(--ok)} .bars .col i.a{background:var(--warn)}
+.bars .col span{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted-2)}
+</style>
+
+<section id="prototype" class="wrap">
+  <div class="sec-head">
+    <span class="idx">B</span>
+    <h2>Two portals, one backend</h2>
+    <p>The same data, filtered by who is looking. Switch roles and move through the screens — the navigation is live.</p>
+  </div>
+
+  <div class="proto-bar">
+    <div class="seg" role="group" aria-label="Choose portal">
+      <button id="btnPM" aria-pressed="true" data-role="pm"><svg class="i" style="font-size:15px"><use href="#i-beam"/></svg> PM portal</button>
+      <button id="btnCL" aria-pressed="false" data-role="cl"><svg class="i" style="font-size:15px"><use href="#i-users"/></svg> Client portal</button>
+    </div>
+    <span class="proto-hint">Interactive — use the sidebar, tabs and buttons</span>
+  </div>
+
+  <div class="frame">
+    <div class="chrome">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="urlbar"><svg class="i" style="font-size:12px;color:var(--ok)"><use href="#i-lock"/></svg><span id="urlText">portal.vertexsteel.com/pm/dashboard</span></span>
+    </div>
+
+    <!-- ============ PM PORTAL ============ -->
+    <div class="rolewrap on" id="rolePM">
+      <div class="app">
+        <aside class="rail">
+          <div class="rail-brand">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2.5 4.5h19M2.5 19.5h19M9.6 4.5v15M14.4 4.5v15"/></svg>
+            <span class="nm">SteelPro</span><span class="rail-role">PM</span>
+          </div>
+          <nav class="rail-nav" id="navPM">
+            <button data-s="pm-dash" aria-current="true"><svg class="i"><use href="#i-home"/></svg><span class="lb">Dashboard</span></button>
+            <button data-s="pm-clients"><svg class="i"><use href="#i-users"/></svg><span class="lb">Clients</span></button>
+            <button data-s="pm-projects"><svg class="i"><use href="#i-folder"/></svg><span class="lb">Projects</span></button>
+            <button data-s="pm-docs"><svg class="i"><use href="#i-file"/></svg><span class="lb">Documents</span></button>
+            <button data-s="pm-reviews"><svg class="i"><use href="#i-review"/></svg><span class="lb">Reviews</span><span class="pill">7</span></button>
+            <button data-s="pm-msgs"><svg class="i"><use href="#i-msg"/></svg><span class="lb">Messages</span><span class="pill">3</span></button>
+            <button data-s="pm-notif"><svg class="i"><use href="#i-bell"/></svg><span class="lb">Notifications</span></button>
+            <button data-s="pm-reports"><svg class="i"><use href="#i-chart"/></svg><span class="lb">Reports</span></button>
+            <button data-s="pm-settings"><svg class="i"><use href="#i-gear"/></svg><span class="lb">Settings</span></button>
+            <button data-s="pm-profile"><svg class="i"><use href="#i-user"/></svg><span class="lb">Profile</span></button>
+            <button data-logout><svg class="i"><use href="#i-out"/></svg><span class="lb">Log out</span></button>
+          </nav>
+          <div class="rail-foot">
+            <span class="av">RD</span>
+            <span class="who"><b>R. Deshmukh</b><span>Project manager</span></span>
+          </div>
+        </aside>
+
+        <main class="ws">
+          <!-- PM DASHBOARD -->
+          <div class="screen on" data-s="pm-dash">
+            <div class="topbar">
+              <h3>Dashboard</h3><span class="crumb">Mon 21 Sep 2026</span>
+              <div class="tb-actions">
+                <span class="search"><svg class="i" style="font-size:13px"><use href="#i-search"/></svg> Search projects</span>
+                <button class="iconbtn"><svg class="i" style="font-size:15px"><use href="#i-bell"/></svg><span class="dotred"></span></button>
+                <button class="btn"><svg class="i"><use href="#i-plus"/></svg> New project</button>
+              </div>
+            </div>
+            <div class="sbody">
+              <div class="pad">
+                <dl class="stats">
+                  <div class="stat"><dt>Clients</dt><dd>14</dd><div class="delta up">+2 this quarter</div></div>
+                  <div class="stat"><dt>Projects</dt><dd>28</dd><div class="delta">all time</div></div>
+                  <div class="stat"><dt>Active projects</dt><dd>11</dd><div class="delta">4 in client review</div></div>
+                  <div class="stat g"><dt>Completed</dt><dd>15</dd><div class="delta">2 released this month</div></div>
+                  <div class="stat a"><dt>Pending review</dt><dd>7</dd><div class="delta">oldest waiting 6 days</div></div>
+                  <div class="stat r"><dt>Open comments</dt><dd>4</dd><div class="delta">2 need a reply today</div></div>
+                </dl>
+
+                <div class="grid2">
+                  <div class="panel">
+                    <div class="panel-h"><h4>Projects needing attention</h4><span class="more" data-goto="pm-projects">All projects</span></div>
+                    <div class="tbl-scroll">
+                      <table>
+                        <thead><tr><th>Project</th><th>Stage</th><th>Progress</th><th>Due</th><th></th></tr></thead>
+                        <tbody>
+                          <tr>
+                            <td><span class="name">Northgate Distribution Warehouse</span><span class="sub">PRJ-2026-014 · Harland Construction</span></td>
+                            <td><span class="badge b-warn">Client review</span></td>
+                            <td><div class="prog"><div class="track"><div class="bar" style="width:78%"></div></div><b>78%</b></div></td>
+                            <td class="sub">15 Mar</td>
+                            <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                          </tr>
+                          <tr>
+                            <td><span class="name">Bay 4 Fabrication Shop Extension</span><span class="sub">PRJ-2026-022 · Meridian Industrial</span></td>
+                            <td><span class="badge b-info">Steel detailing</span></td>
+                            <td><div class="prog"><div class="track"><div class="bar" style="width:45%"></div></div><b>45%</b></div></td>
+                            <td class="sub">30 Apr</td>
+                            <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                          </tr>
+                          <tr>
+                            <td><span class="name">Mezzanine Platform, Unit 7</span><span class="sub">PRJ-2026-009 · Stratton Developments</span></td>
+                            <td><span class="badge b-stop">Revision required</span></td>
+                            <td><div class="prog"><div class="track"><div class="bar a" style="width:92%"></div></div><b>92%</b></div></td>
+                            <td class="sub">28 Feb</td>
+                            <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                          </tr>
+                          <tr>
+                            <td><span class="name">Tank Farm Pipe Rack, Phase 1</span><span class="sub">PRJ-2026-031 · Caldwell Energy</span></td>
+                            <td><span class="badge b-grey">Engineering</span></td>
+                            <td><div class="prog"><div class="track"><div class="bar" style="width:18%"></div></div><b>18%</b></div></td>
+                            <td class="sub">12 Jun</td>
+                            <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="panel">
+                    <div class="panel-h"><h4>Recent activity</h4><span class="more" data-goto="pm-notif">Notifications</span></div>
+                    <ul class="feed">
+                      <li><span class="ic r"><svg class="i"><use href="#i-alert"/></svg></span><div class="txt"><b>J. Harland</b> requested a revision on <b>CD-008 Moment Connection Detail</b> R3<time>Today · 14:22</time></div></li>
+                      <li><span class="ic g"><svg class="i"><use href="#i-check"/></svg></span><div class="txt"><b>J. Harland</b> approved <b>B-027 Beam Elevations, Grid 3–6</b> R2<time>Today · 11:04</time></div></li>
+                      <li><span class="ic"><svg class="i"><use href="#i-up"/></svg></span><div class="txt"><b>S. Nair</b> uploaded <b>C-014 Column Schedule</b> R3 and issued it for client review<time>Today · 09:38</time></div></li>
+                      <li><span class="ic a"><svg class="i"><use href="#i-msg"/></svg></span><div class="txt">New message in <b>Northgate Distribution Warehouse</b> chat<time>Yesterday · 16:50</time></div></li>
+                      <li><span class="ic"><svg class="i"><use href="#i-folder"/></svg></span><div class="txt">Stage moved to <b>Client review</b> on PRJ-2026-014<time>Yesterday · 09:12</time></div></li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div class="grid2 even" style="margin-top:16px">
+                  <div class="panel">
+                    <div class="panel-h"><h4>Waiting on the client</h4><span class="more" data-goto="pm-reviews">Review queue</span></div>
+                    <ul class="feed">
+                      <li><span class="ic a"><svg class="i"><use href="#i-clock"/></svg></span><div class="txt"><b>E-201 Erection Plan, Level 2</b> <span class="rev">R1</span> — Harland Construction<time>issued 6 days ago · no response</time></div></li>
+                      <li><span class="ic a"><svg class="i"><use href="#i-clock"/></svg></span><div class="txt"><b>C-014 Column Schedule</b> <span class="rev">R3</span> — Harland Construction<time>issued today</time></div></li>
+                      <li><span class="ic a"><svg class="i"><use href="#i-clock"/></svg></span><div class="txt"><b>ABM-01 Advance Bill of Materials</b> <span class="rev">R1</span> — Meridian Industrial<time>issued 2 days ago</time></div></li>
+                    </ul>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-h"><h4>Drawings issued this week</h4></div>
+                    <div class="panel-b">
+                      <div class="bars">
+                        <div class="col"><i style="height:38%"></i><span>Mon</span></div>
+                        <div class="col"><i style="height:64%"></i><span>Tue</span></div>
+                        <div class="col"><i class="g" style="height:88%"></i><span>Wed</span></div>
+                        <div class="col"><i style="height:52%"></i><span>Thu</span></div>
+                        <div class="col"><i class="a" style="height:72%"></i><span>Fri</span></div>
+                        <div class="col"><i style="height:12%"></i><span>Sat</span></div>
+                        <div class="col"><i style="height:4%"></i><span>Sun</span></div>
+                      </div>
+                      <p style="font-size:12.5px;color:var(--muted);margin-top:8px">31 sheets issued, 19 returned. Median client turnaround this month: 2.4 days.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PM CLIENTS -->
+          <div class="screen" data-s="pm-clients">
+            <div class="topbar">
+              <h3>Clients</h3><span class="crumb">14 companies</span>
+              <div class="tb-actions">
+                <span class="search"><svg class="i" style="font-size:13px"><use href="#i-search"/></svg> Search clients</span>
+                <button class="btn ghost"><svg class="i"><use href="#i-send"/></svg> Send invitation</button>
+                <button class="btn"><svg class="i"><use href="#i-plus"/></svg> New client</button>
+              </div>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel">
+                <div class="tbl-scroll">
+                  <table>
+                    <thead><tr><th>Company</th><th>Portal users</th><th>Projects</th><th>Account</th><th>Last sign-in</th><th></th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td><div class="mini"><span class="av">HC</span><span><span class="name">Harland Construction Ltd</span><span class="sub">CL-001 · Leeds</span></span></div></td>
+                        <td><span class="name" style="font-weight:500">J. Harland, P. Okafor</span><span class="sub">2 active</span></td>
+                        <td>6</td>
+                        <td><span class="badge b-ok">Active</span></td>
+                        <td class="sub">Today 14:22</td>
+                        <td><button class="btn ghost sm">Manage</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mini"><span class="av">MI</span><span><span class="name">Meridian Industrial</span><span class="sub">CL-002 · Sheffield</span></span></div></td>
+                        <td><span class="name" style="font-weight:500">A. Beck</span><span class="sub">1 active</span></td>
+                        <td>4</td>
+                        <td><span class="badge b-ok">Active</span></td>
+                        <td class="sub">19 Sep 09:41</td>
+                        <td><button class="btn ghost sm">Manage</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mini"><span class="av">CE</span><span><span class="name">Caldwell Energy</span><span class="sub">CL-003 · Aberdeen</span></span></div></td>
+                        <td><span class="name" style="font-weight:500">M. Caldwell</span><span class="sub">invitation sent</span></td>
+                        <td>1</td>
+                        <td><span class="badge b-warn">Invited</span></td>
+                        <td class="sub">—</td>
+                        <td><button class="btn ghost sm">Resend</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mini"><span class="av">SD</span><span><span class="name">Stratton Developments</span><span class="sub">CL-004 · Manchester</span></span></div></td>
+                        <td><span class="name" style="font-weight:500">L. Stratton, R. Iqbal</span><span class="sub">2 active</span></td>
+                        <td>3</td>
+                        <td><span class="badge b-ok">Active</span></td>
+                        <td class="sub">18 Sep 17:05</td>
+                        <td><button class="btn ghost sm">Manage</button></td>
+                      </tr>
+                      <tr>
+                        <td><div class="mini"><span class="av">KF</span><span><span class="name">Kirkby Foods (Plant 2)</span><span class="sub">CL-007 · Hull</span></span></div></td>
+                        <td><span class="name" style="font-weight:500">D. Whelan</span><span class="sub">disabled</span></td>
+                        <td>2</td>
+                        <td><span class="badge b-grey">Disabled</span></td>
+                        <td class="sub">04 Mar 11:20</td>
+                        <td><button class="btn ghost sm">Re-enable</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="grid2 even" style="margin-top:16px">
+                <div class="panel">
+                  <div class="panel-h"><h4>New client</h4><span class="badge b-info" style="margin-left:auto">Draft</span></div>
+                  <div class="panel-b" style="display:grid;gap:11px">
+                    <div><label class="inp-l">Company name</label><div class="inp filled">Caldwell Energy</div></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:11px">
+                      <div><label class="inp-l">Client code</label><div class="inp filled mono">CL-003</div></div>
+                      <div><label class="inp-l">Storage folder</label><div class="inp mono" style="font-size:11.5px">…\Clients\Client-003\</div></div>
+                    </div>
+                    <div><label class="inp-l">Portal contact email</label><div class="inp filled">m.caldwell@caldwell-energy.co.uk</div></div>
+                    <div style="display:flex;gap:9px;align-items:center;padding-top:2px">
+                      <button class="btn">Create client and send invitation</button>
+                      <span style="font-size:12px;color:var(--muted)">Folder tree is created on the file server automatically.</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-h"><h4>Harland Construction — access</h4></div>
+                  <div class="panel-b">
+                    <dl class="kv">
+                      <dt>Projects visible</dt><dd>6 of 28 (own company only)</dd>
+                      <dt>Drawing download</dt><dd>Approved revisions only</dd>
+                      <dt>Markup pins</dt><dd>Enabled</dd>
+                      <dt>Named users</dt><dd>2 of 5 seats</dd>
+                      <dt>Invitation expiry</dt><dd>72 hours</dd>
+                    </dl>
+                    <div style="display:flex;gap:8px;margin-top:13px">
+                      <button class="btn ghost sm"><svg class="i"><use href="#i-edit"/></svg> Edit client</button>
+                      <button class="btn ghost sm" style="color:var(--stop);border-color:var(--stop-line)"><svg class="i"><use href="#i-x"/></svg> Disable account</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM PROJECTS -->
+          <div class="screen" data-s="pm-projects">
+            <div class="topbar">
+              <h3>Projects</h3><span class="crumb">11 active · 15 completed</span>
+              <div class="tb-actions">
+                <span class="search"><svg class="i" style="font-size:13px"><use href="#i-search"/></svg> Search</span>
+                <button class="btn"><svg class="i"><use href="#i-plus"/></svg> New project</button>
+              </div>
+            </div>
+            <div class="tabs" role="tablist">
+              <button role="tab" aria-selected="true">Active</button>
+              <button role="tab" aria-selected="false">All</button>
+              <button role="tab" aria-selected="false">In client review</button>
+              <button role="tab" aria-selected="false">Completed</button>
+              <button role="tab" aria-selected="false">On hold</button>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel">
+                <div class="tbl-scroll">
+                  <table>
+                    <thead><tr><th>Project</th><th>Client</th><th>Current stage</th><th>Progress</th><th>Target</th><th>Docs</th><th></th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td><span class="name">Northgate Distribution Warehouse</span><span class="sub">PRJ-2026-014</span></td>
+                        <td>Harland Construction</td>
+                        <td><span class="badge b-warn">Client review</span></td>
+                        <td><div class="prog"><div class="track"><div class="bar" style="width:78%"></div></div><b>78%</b></div></td>
+                        <td class="sub">15 Mar 2026</td><td>42</td>
+                        <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">Bay 4 Fabrication Shop Extension</span><span class="sub">PRJ-2026-022</span></td>
+                        <td>Meridian Industrial</td>
+                        <td><span class="badge b-info">Steel detailing</span></td>
+                        <td><div class="prog"><div class="track"><div class="bar" style="width:45%"></div></div><b>45%</b></div></td>
+                        <td class="sub">30 Apr 2026</td><td>17</td>
+                        <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">Mezzanine Platform, Unit 7</span><span class="sub">PRJ-2026-009</span></td>
+                        <td>Stratton Developments</td>
+                        <td><span class="badge b-stop">Revision</span></td>
+                        <td><div class="prog"><div class="track"><div class="bar a" style="width:92%"></div></div><b>92%</b></div></td>
+                        <td class="sub">28 Feb 2026</td><td>31</td>
+                        <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">Tank Farm Pipe Rack, Phase 1</span><span class="sub">PRJ-2026-031</span></td>
+                        <td>Caldwell Energy</td>
+                        <td><span class="badge b-grey">Engineering</span></td>
+                        <td><div class="prog"><div class="track"><div class="bar" style="width:18%"></div></div><b>18%</b></div></td>
+                        <td class="sub">12 Jun 2026</td><td>6</td>
+                        <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">Riverside Office Building, Frame B</span><span class="sub">PRJ-2025-108</span></td>
+                        <td>Harland Construction</td>
+                        <td><span class="badge b-ok">Completed</span></td>
+                        <td><div class="prog"><div class="track"><div class="bar g" style="width:100%"></div></div><b>100%</b></div></td>
+                        <td class="sub">12 Jan 2026</td><td>88</td>
+                        <td><button class="btn ghost sm" data-goto="pm-project">Open</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM PROJECT DETAIL -->
+          <div class="screen" data-s="pm-project">
+            <div class="topbar">
+              <button class="iconbtn" data-goto="pm-projects" aria-label="Back to projects"><svg class="i" style="font-size:15px"><use href="#i-chevL"/></svg></button>
+              <h3>Northgate Distribution Warehouse</h3>
+              <span class="crumb">PRJ-2026-014</span>
+              <span class="badge b-warn">Client review</span>
+              <div class="tb-actions">
+                <button class="btn ghost"><svg class="i"><use href="#i-up"/></svg> Upload drawing</button>
+                <button class="btn"><svg class="i"><use href="#i-send"/></svg> Issue for review</button>
+              </div>
+            </div>
+            <div class="tabs" role="tablist">
+              <button role="tab" aria-selected="true">Overview</button>
+              <button role="tab" aria-selected="false" data-goto="pm-docs">Documents</button>
+              <button role="tab" aria-selected="false" data-goto="pm-reviews">Reviews</button>
+              <button role="tab" aria-selected="false" data-goto="pm-msgs">Chat</button>
+              <button role="tab" aria-selected="false">Team</button>
+              <button role="tab" aria-selected="false">Audit log</button>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel" style="margin-bottom:16px">
+                <div class="panel-b">
+                  <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end">
+                    <div style="flex:1 1 300px">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+                        <span style="font-size:13px;font-weight:600;color:var(--ink)">Overall progress</span>
+                        <span class="mono" style="font-size:20px;font-weight:600;color:var(--ink)">78%</span>
+                      </div>
+                      <div class="track" style="height:9px"><div class="bar" style="width:78%"></div></div>
+                      <p style="font-size:12px;color:var(--muted);margin-top:7px">Weighted by sheets issued and approved. 33 of 42 drawings approved.</p>
+                    </div>
+                  </div>
+                  <dl class="tb-grid" style="margin:16px -15px -14px;border-top:1px solid var(--rule)">
+                    <div class="tb-cell"><dt>Client</dt><dd>Harland Construction</dd></div>
+                    <div class="tb-cell"><dt>Project code</dt><dd class="mono">PRJ-2026-014</dd></div>
+                    <div class="tb-cell"><dt>Start date</dt><dd>05 Jan 2026</dd></div>
+                    <div class="tb-cell"><dt>Expected completion</dt><dd>15 Mar 2026</dd></div>
+                    <div class="tb-cell"><dt>Tonnage</dt><dd>412 t</dd></div>
+                  </dl>
+                </div>
+              </div>
+
+              <div class="grid2">
+                <div class="panel">
+                  <div class="panel-h"><h4>Project timeline</h4><span class="badge b-info" style="margin-left:auto">Stage 5 of 10</span></div>
+                  <ol class="tl">
+                    <li class="done"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-check"/></svg></i><s></s></span><span class="body"><b>Project received</b><time>05 Jan 2026</time></span></li>
+                    <li class="done"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-check"/></svg></i><s></s></span><span class="body"><b>Engineering</b><time>10 Jan 2026</time></span></li>
+                    <li class="done"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-check"/></svg></i><s></s></span><span class="body"><b>Steel detailing</b><time>20 Jan 2026</time></span></li>
+                    <li class="done"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-check"/></svg></i><s></s></span><span class="body"><b>Internal review</b><time>05 Feb 2026</time></span></li>
+                    <li class="now"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-clock"/></svg></i><s></s></span><span class="body"><b>Client review</b><time>in progress</time></span></li>
+                    <li><span class="mk"><i></i><s></s></span><span class="body"><b>Revision</b><time>—</time></span></li>
+                    <li><span class="mk"><i></i><s></s></span><span class="body"><b>Client approval</b><time>—</time></span></li>
+                    <li><span class="mk"><i></i><s></s></span><span class="body"><b>Released for fabrication</b><time>—</time></span></li>
+                    <li><span class="mk"><i></i><s></s></span><span class="body"><b>Fabrication</b><time>—</time></span></li>
+                    <li><span class="mk"><i></i></span><span class="body"><b>Completed</b><time>target 15 Mar</time></span></li>
+                  </ol>
+                </div>
+
+                <div>
+                  <div class="panel" style="margin-bottom:16px">
+                    <div class="panel-h"><h4>Latest drawings</h4><span class="more" data-goto="pm-docs">Register</span></div>
+                    <ul class="feed">
+                      <li><span class="ic a"><svg class="i"><use href="#i-file"/></svg></span><div class="txt"><b>C-014 Column Schedule</b> <span class="rev">R3</span><time>under client review · issued today</time></div></li>
+                      <li><span class="ic g"><svg class="i"><use href="#i-file"/></svg></span><div class="txt"><b>B-027 Beam Elevations, Grid 3–6</b> <span class="rev">R2</span><time>approved · 21 Sep 11:04</time></div></li>
+                      <li><span class="ic r"><svg class="i"><use href="#i-file"/></svg></span><div class="txt"><b>CD-008 Moment Connection Detail</b> <span class="rev">R3</span><time>revision required · 2 open comments</time></div></li>
+                    </ul>
+                  </div>
+                  <div class="panel">
+                    <div class="panel-h"><h4>Audit log</h4><span class="more">Export CSV</span></div>
+                    <ul class="feed">
+                      <li><span class="ic"><svg class="i"><use href="#i-user"/></svg></span><div class="txt"><b>j.harland</b> viewed CD-008 R3 · 92.14.6.30<time>21 Sep 14:18</time></div></li>
+                      <li><span class="ic"><svg class="i"><use href="#i-down"/></svg></span><div class="txt"><b>j.harland</b> downloaded B-027 R2 (approved)<time>21 Sep 11:06</time></div></li>
+                      <li><span class="ic"><svg class="i"><use href="#i-up"/></svg></span><div class="txt"><b>s.nair</b> uploaded C-014 R3 · AV scan clean<time>21 Sep 09:38</time></div></li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM DOCUMENTS -->
+          <div class="screen" data-s="pm-docs">
+            <div class="topbar">
+              <h3>Documents</h3><span class="crumb">PRJ-2026-014 · 42 sheets</span>
+              <div class="tb-actions">
+                <span class="search"><svg class="i" style="font-size:13px"><use href="#i-search"/></svg> Drawing no. or title</span>
+                <button class="btn ghost"><svg class="i"><use href="#i-plus"/></svg> New revision</button>
+                <button class="btn"><svg class="i"><use href="#i-up"/></svg> Upload</button>
+              </div>
+            </div>
+            <div class="tabs" role="tablist">
+              <button role="tab" aria-selected="true">All (42)</button>
+              <button role="tab" aria-selected="false">Drawings (31)</button>
+              <button role="tab" aria-selected="false">Models (4)</button>
+              <button role="tab" aria-selected="false">Schedules (5)</button>
+              <button role="tab" aria-selected="false">Approved (33)</button>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel">
+                <div class="tbl-scroll">
+                  <table>
+                    <thead><tr><th>Document</th><th>Type</th><th>Rev</th><th>Uploaded</th><th>By</th><th>Status</th><th>Review</th><th></th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td><span class="name">C-014 Column Schedule, Grid A–F</span><span class="sub">C-014_ColSchedule_R3.pdf · 2.4 MB</span></td>
+                        <td>Drawing</td><td><span class="rev">R3</span></td>
+                        <td class="sub">21 Sep 2026</td><td class="sub">S. Nair</td>
+                        <td><span class="badge b-warn">Issued</span></td>
+                        <td><span class="badge b-warn">Under client review</span></td>
+                        <td><button class="btn ghost sm" data-scroll="review">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">B-027 Beam Elevations, Grid 3–6</span><span class="sub">B-027_BeamElev_R2.pdf · 1.8 MB</span></td>
+                        <td>Drawing</td><td><span class="rev">R2</span></td>
+                        <td class="sub">18 Sep 2026</td><td class="sub">S. Nair</td>
+                        <td><span class="badge b-ok">Released</span></td>
+                        <td><span class="badge b-ok">Approved</span></td>
+                        <td><button class="btn ghost sm" data-scroll="review">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">CD-008 Moment Connection Detail, Grid B5</span><span class="sub">CD-008_MomentConn_R3.pdf · 940 KB</span></td>
+                        <td>Detail</td><td><span class="rev">R3</span></td>
+                        <td class="sub">16 Sep 2026</td><td class="sub">A. Kulkarni</td>
+                        <td><span class="badge b-stop">Superseded soon</span></td>
+                        <td><span class="badge b-stop">Revision required</span></td>
+                        <td><button class="btn ghost sm" data-scroll="review">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">E-201 Erection Plan, Level 2</span><span class="sub">E-201_ErectionPlan_R1.pdf · 3.1 MB</span></td>
+                        <td>Drawing</td><td><span class="rev">R1</span></td>
+                        <td class="sub">15 Sep 2026</td><td class="sub">R. Deshmukh</td>
+                        <td><span class="badge b-warn">Issued</span></td>
+                        <td><span class="badge b-warn">Under client review</span></td>
+                        <td><button class="btn ghost sm" data-scroll="review">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">ABM-01 Advance Bill of Materials</span><span class="sub">ABM-01_R1.xlsx · 210 KB</span></td>
+                        <td>Schedule</td><td><span class="rev">R1</span></td>
+                        <td class="sub">12 Sep 2026</td><td class="sub">S. Nair</td>
+                        <td><span class="badge b-info">Internal</span></td>
+                        <td><span class="badge b-grey">Not issued</span></td>
+                        <td><button class="btn ghost sm">Open</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">Northgate frame model</span><span class="sub">Northgate_Frame_v12.dwg · 46 MB</span></td>
+                        <td>Model</td><td><span class="rev">v12</span></td>
+                        <td class="sub">09 Sep 2026</td><td class="sub">A. Kulkarni</td>
+                        <td><span class="badge b-info">Internal</span></td>
+                        <td><span class="badge b-grey">Not issued</span></td>
+                        <td><button class="btn ghost sm">Open</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="grid2" style="margin-top:16px">
+                <div class="panel">
+                  <div class="panel-h"><h4>Revision history — CD-008 Moment Connection Detail</h4></div>
+                  <div class="panel-b">
+                    <div class="chain">
+                      <span class="r">R0</span><span class="ar">→</span>
+                      <span class="r">R1</span><span class="ar">→</span>
+                      <span class="r">R2</span><span class="ar">→</span>
+                      <span class="r cur">R3</span><span class="ar">→</span>
+                      <span class="r" style="border-style:dashed;color:var(--muted-2)">R4 pending</span>
+                    </div>
+                    <p style="font-size:12.5px;color:var(--muted);margin-top:11px">Every revision keeps its own file and its own review record. Superseded sheets stay readable and stay downloadable for the audit trail — nothing is ever overwritten in place.</p>
+                    <table style="margin-top:12px">
+                      <thead><tr><th>Rev</th><th>Issued</th><th>Outcome</th><th>Comments</th></tr></thead>
+                      <tbody>
+                        <tr><td><span class="rev">R3</span></td><td class="sub">16 Sep</td><td><span class="badge b-stop">Revision required</span></td><td>2 open</td></tr>
+                        <tr><td><span class="rev">R2</span></td><td class="sub">02 Sep</td><td><span class="badge b-warn">Approved with comments</span></td><td>3 closed</td></tr>
+                        <tr><td><span class="rev">R1</span></td><td class="sub">21 Aug</td><td><span class="badge b-stop">Revision required</span></td><td>5 closed</td></tr>
+                        <tr><td><span class="rev">R0</span></td><td class="sub">12 Aug</td><td><span class="badge b-grey">Internal issue</span></td><td>—</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-h"><h4>Upload</h4></div>
+                  <div class="panel-b">
+                    <div style="border:1.5px dashed var(--steel-line);border-radius:9px;padding:22px;text-align:center;background:#FAFCFE">
+                      <svg class="i" style="font-size:24px;color:var(--steel)"><use href="#i-up"/></svg>
+                      <p style="font-size:13.5px;font-weight:600;color:var(--ink);margin-top:8px">Drop files, or choose from your computer</p>
+                      <p style="font-size:12px;color:var(--muted);margin-top:4px">PDF, DWG, DXF, XLSX, PNG, JPG · up to 150 MB each</p>
+                    </div>
+                    <dl class="kv" style="margin-top:13px">
+                      <dt>revision</dt><dd>R4 (next in sequence)</dd>
+                      <dt>destination</dt><dd style="font-size:11.5px" class="mono">…\Project-001\Revisions\R4\</dd>
+                      <dt>checks</dt><dd>type · size · AV scan</dd>
+                      <dt>on upload</dt><dd>R3 marked superseded</dd>
+                    </dl>
+                    <button class="btn" style="width:100%;justify-content:center;margin-top:13px"><svg class="i"><use href="#i-send"/></svg> Upload and issue R4 for client review</button>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM REVIEWS -->
+          <div class="screen" data-s="pm-reviews">
+            <div class="topbar">
+              <h3>Reviews</h3><span class="crumb">7 awaiting client · 4 open comments</span>
+              <div class="tb-actions"><button class="btn ghost"><svg class="i"><use href="#i-bell"/></svg> Send reminder</button></div>
+            </div>
+            <div class="tabs" role="tablist">
+              <button role="tab" aria-selected="true">Awaiting client (7)</button>
+              <button role="tab" aria-selected="false">Comments to answer (4)</button>
+              <button role="tab" aria-selected="false">Approved (33)</button>
+              <button role="tab" aria-selected="false">Internal review (2)</button>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel" style="margin-bottom:16px">
+                <div class="tbl-scroll">
+                  <table>
+                    <thead><tr><th>Drawing</th><th>Project</th><th>Rev</th><th>Issued</th><th>Waiting</th><th>Review status</th><th></th></tr></thead>
+                    <tbody>
+                      <tr>
+                        <td><span class="name">E-201 Erection Plan, Level 2</span><span class="sub">Harland Construction</span></td>
+                        <td class="sub">PRJ-2026-014</td><td><span class="rev">R1</span></td><td class="sub">15 Sep</td>
+                        <td><span class="badge b-stop">6 days</span></td>
+                        <td><span class="badge b-warn">Under client review</span></td>
+                        <td><button class="btn ghost sm">Remind</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">C-014 Column Schedule</span><span class="sub">Harland Construction</span></td>
+                        <td class="sub">PRJ-2026-014</td><td><span class="rev">R3</span></td><td class="sub">21 Sep</td>
+                        <td><span class="badge b-grey">today</span></td>
+                        <td><span class="badge b-warn">Under client review</span></td>
+                        <td><button class="btn ghost sm" data-scroll="review">Preview</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">CD-008 Moment Connection Detail</span><span class="sub">Harland Construction</span></td>
+                        <td class="sub">PRJ-2026-014</td><td><span class="rev">R3</span></td><td class="sub">16 Sep</td>
+                        <td><span class="badge b-grey">returned</span></td>
+                        <td><span class="badge b-stop">Revision required</span></td>
+                        <td><button class="btn sm" data-scroll="review">Open comments</button></td>
+                      </tr>
+                      <tr>
+                        <td><span class="name">ABM-01 Advance Bill of Materials</span><span class="sub">Meridian Industrial</span></td>
+                        <td class="sub">PRJ-2026-022</td><td><span class="rev">R1</span></td><td class="sub">19 Sep</td>
+                        <td><span class="badge b-warn">2 days</span></td>
+                        <td><span class="badge b-warn">Under client review</span></td>
+                        <td><button class="btn ghost sm">Remind</button></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              <div class="panel">
+                <div class="panel-h"><h4>Comments to answer — CD-008 R3</h4><span class="badge b-stop" style="margin-left:auto">2 open</span></div>
+                <div class="cmt">
+                  <span class="num">1</span>
+                  <div class="c-b">
+                    <div class="c-m"><b>J. Harland</b><span class="loc">Page 4 · Grid B5</span><span class="badge b-stop">Open</span></div>
+                    <p>Bolt group at B5 clashes with the brace gusset. Revise to 4 no. M24 8.8 or shift the work point 75 mm toward the column.</p>
+                    <time>21 Sep · 14:22</time>
+                    <div style="display:flex;gap:7px;margin-top:8px"><button class="btn sm">Reply</button><button class="btn ghost sm">Mark for R4</button></div>
+                  </div>
+                </div>
+                <div class="cmt">
+                  <span class="num">2</span>
+                  <div class="c-b">
+                    <div class="c-m"><b>P. Okafor</b><span class="loc">Page 4 · Grid C3</span><span class="badge b-stop">Open</span></div>
+                    <p>Stiffener thickness shown as 10 mm — structural drawings call for PL 12. Please confirm against the design model.</p>
+                    <time>21 Sep · 14:31</time>
+                    <div style="display:flex;gap:7px;margin-top:8px"><button class="btn sm">Reply</button><button class="btn ghost sm">Mark for R4</button></div>
+                  </div>
+                </div>
+                <div class="cmt">
+                  <span class="num ok">3</span>
+                  <div class="c-b">
+                    <div class="c-m"><b>J. Harland</b><span class="loc">Page 4 · Grid D2</span><span class="badge b-ok">Answered</span></div>
+                    <p>Beam camber not noted at the splice. — Answered by R. Deshmukh: 12 mm camber added to the beam table on R3.</p>
+                    <time>16 Sep · 10:05</time>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM MESSAGES -->
+          <div class="screen" data-s="pm-msgs">
+            <div class="topbar">
+              <h3>Messages</h3><span class="crumb">Project chats</span>
+              <div class="tb-actions"><span class="badge b-info">3 unread</span></div>
+            </div>
+            <div class="sbody nos">
+              <div class="chat">
+                <div class="threads">
+                  <div class="thread" aria-current="true">
+                    <span class="av">HC</span>
+                    <span class="tb2"><span class="tn">Northgate Warehouse</span><span class="tp">J. Harland · connection detail…</span></span>
+                    <span class="cnt">2</span>
+                  </div>
+                  <div class="thread">
+                    <span class="av">MI</span>
+                    <span class="tb2"><span class="tn">Bay 4 Shop Extension</span><span class="tp">A. Beck · Thanks, received.</span></span>
+                  </div>
+                  <div class="thread">
+                    <span class="av">SD</span>
+                    <span class="tb2"><span class="tn">Mezzanine, Unit 7</span><span class="tp">L. Stratton · When can we exp…</span></span>
+                    <span class="cnt">1</span>
+                  </div>
+                  <div class="thread">
+                    <span class="av">CE</span>
+                    <span class="tb2"><span class="tn">Tank Farm Pipe Rack</span><span class="tp">No messages yet</span></span>
+                  </div>
+                  <div class="thread">
+                    <span class="av">HC</span>
+                    <span class="tb2"><span class="tn">Riverside Office, Frame B</span><span class="tp">Archived · completed 12 Jan</span></span>
+                  </div>
+                </div>
+                <div class="convo">
+                  <div class="convo-h">
+                    <span class="av" style="width:30px;height:30px;border-radius:7px;background:var(--ink-3);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace">HC</span>
+                    <div><h4>Northgate Distribution Warehouse</h4><span class="sub">PRJ-2026-014 · J. Harland, P. Okafor</span></div>
+                    <span class="badge b-info" style="margin-left:auto">Private to this project</span>
+                  </div>
+                  <div class="msgs" id="pmMsgs">
+                    <div class="daysep"><span>Today · 21 Sep 2026</span></div>
+                    <div class="msg me">
+                      <span class="av">RD</span>
+                      <div><div class="bub"><span class="who">You · Project manager<time>09:41</time></span>C-014 Column Schedule R3 is uploaded and issued for review. The shim note you raised on R2 is now note 7.
+                        <div class="attach"><span class="ft">PDF</span><span class="fi"><b>C-014_ColSchedule_R3.pdf</b><span>2.4 MB</span></span></div>
+                      </div><div class="reads">Read 11:02 <svg class="i" style="font-size:11px"><use href="#i-check"/></svg></div></div>
+                    </div>
+                    <div class="msg">
+                      <span class="av">JH</span>
+                      <div class="bub"><span class="who">J. Harland · Harland Construction<time>11:04</time></span>Got it. Beam elevations look fine, I've approved B-027. Going through the column schedule this afternoon.</div>
+                    </div>
+                    <div class="msg">
+                      <span class="av">JH</span>
+                      <div class="bub"><span class="who">J. Harland · Harland Construction<time>14:22</time></span>One issue on CD-008 — the bolt group at B5 fouls the brace gusset. I've pinned it on page 4 and marked the sheet for revision.</div>
+                    </div>
+                    <div class="msg me">
+                      <span class="av">RD</span>
+                      <div><div class="bub"><span class="who">You · Project manager<time>14:45</time></span>Seen. We'll take it to 4 no. M24 and reissue as R4 tomorrow morning. The erection plan E-201 is still open with you from the 15th — any comments on that one?</div>
+                      <div class="reads">Delivered</div></div>
+                    </div>
+                  </div>
+                  <div class="composer">
+                    <button class="iconbtn" aria-label="Attach file"><svg class="i" style="font-size:15px"><use href="#i-clip"/></svg></button>
+                    <input id="pmInput" placeholder="Write a message…" aria-label="Write a message">
+                    <button class="send" id="pmSend" aria-label="Send message"><svg class="i" style="font-size:16px"><use href="#i-send"/></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PM NOTIFICATIONS -->
+          <div class="screen" data-s="pm-notif">
+            <div class="topbar">
+              <h3>Notifications</h3><span class="crumb">5 unread</span>
+              <div class="tb-actions"><button class="btn ghost"><svg class="i"><use href="#i-check"/></svg> Mark all read</button></div>
+            </div>
+            <div class="tabs" role="tablist">
+              <button role="tab" aria-selected="true">All</button>
+              <button role="tab" aria-selected="false">Reviews</button>
+              <button role="tab" aria-selected="false">Documents</button>
+              <button role="tab" aria-selected="false">Messages</button>
+              <button role="tab" aria-selected="false">Projects</button>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel">
+                <ul class="feed">
+                  <li class="unread"><span class="ic r"><svg class="i"><use href="#i-alert"/></svg></span><div class="txt"><b>Revision requested</b> — J. Harland returned CD-008 R3 with 2 comments<time>Today 14:22 · PRJ-2026-014</time></div></li>
+                  <li class="unread"><span class="ic g"><svg class="i"><use href="#i-check"/></svg></span><div class="txt"><b>Document approved</b> — B-027 Beam Elevations R2 approved by J. Harland<time>Today 11:04 · PRJ-2026-014</time></div></li>
+                  <li class="unread"><span class="ic a"><svg class="i"><use href="#i-msg"/></svg></span><div class="txt"><b>New chat message</b> — 2 unread in Northgate Warehouse<time>Today 14:22 · PRJ-2026-014</time></div></li>
+                  <li class="unread"><span class="ic"><svg class="i"><use href="#i-up"/></svg></span><div class="txt"><b>New revision uploaded</b> — S. Nair uploaded C-014 R3 and issued it for review<time>Today 09:38 · PRJ-2026-014</time></div></li>
+                  <li class="unread"><span class="ic a"><svg class="i"><use href="#i-clock"/></svg></span><div class="txt"><b>Review overdue</b> — E-201 Erection Plan R1 has been with the client 6 days<time>Today 08:00 · PRJ-2026-014</time></div></li>
+                  <li><span class="ic"><svg class="i"><use href="#i-folder"/></svg></span><div class="txt"><b>Stage changed</b> — Northgate moved from Internal review to Client review<time>Yesterday 09:12 · PRJ-2026-014</time></div></li>
+                  <li><span class="ic"><svg class="i"><use href="#i-chart"/></svg></span><div class="txt"><b>Progress updated</b> — Bay 4 Shop Extension moved to 45%<time>19 Sep · PRJ-2026-022</time></div></li>
+                  <li><span class="ic g"><svg class="i"><use href="#i-users"/></svg></span><div class="txt"><b>Invitation accepted</b> — A. Beck set a password and signed in<time>19 Sep · Meridian Industrial</time></div></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM REPORTS -->
+          <div class="screen" data-s="pm-reports">
+            <div class="topbar"><h3>Reports</h3><span class="crumb">Sep 2026</span>
+              <div class="tb-actions"><button class="btn ghost"><svg class="i"><use href="#i-down"/></svg> Export</button></div></div>
+            <div class="sbody"><div class="pad">
+              <dl class="stats">
+                <div class="stat"><dt>Sheets issued</dt><dd>134</dd><div class="delta up">+18 vs Aug</div></div>
+                <div class="stat g"><dt>First-time approval</dt><dd>71%</dd><div class="delta">R0 or R1 accepted</div></div>
+                <div class="stat a"><dt>Median turnaround</dt><dd>2.4d</dd><div class="delta">client response time</div></div>
+                <div class="stat r"><dt>Revisions caused</dt><dd>23</dd><div class="delta">by client comments</div></div>
+              </dl>
+              <div class="grid2" style="margin-top:16px">
+                <div class="panel">
+                  <div class="panel-h"><h4>Review outcomes by project</h4></div>
+                  <div class="tbl-scroll"><table>
+                    <thead><tr><th>Project</th><th>Issued</th><th>Approved</th><th>With comments</th><th>Revision</th></tr></thead>
+                    <tbody>
+                      <tr><td><span class="name">Northgate Warehouse</span><span class="sub">PRJ-2026-014</span></td><td>42</td><td>33</td><td>5</td><td>4</td></tr>
+                      <tr><td><span class="name">Bay 4 Shop Extension</span><span class="sub">PRJ-2026-022</span></td><td>17</td><td>11</td><td>4</td><td>2</td></tr>
+                      <tr><td><span class="name">Mezzanine, Unit 7</span><span class="sub">PRJ-2026-009</span></td><td>31</td><td>27</td><td>2</td><td>2</td></tr>
+                      <tr><td><span class="name">Riverside Office, Frame B</span><span class="sub">PRJ-2025-108</span></td><td>88</td><td>80</td><td>6</td><td>2</td></tr>
+                    </tbody>
+                  </table></div>
+                </div>
+                <div class="panel">
+                  <div class="panel-h"><h4>Client turnaround, days</h4></div>
+                  <div class="panel-b">
+                    <div class="bars">
+                      <div class="col"><i class="g" style="height:26%"></i><span>Harland</span></div>
+                      <div class="col"><i style="height:48%"></i><span>Meridian</span></div>
+                      <div class="col"><i class="a" style="height:76%"></i><span>Stratton</span></div>
+                      <div class="col"><i style="height:34%"></i><span>Caldwell</span></div>
+                      <div class="col"><i class="g" style="height:20%"></i><span>Kirkby</span></div>
+                    </div>
+                    <p style="font-size:12.5px;color:var(--muted);margin-top:8px">Stratton averages 5.8 days. Worth agreeing a review window in the next contract.</p>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM SETTINGS -->
+          <div class="screen" data-s="pm-settings">
+            <div class="topbar"><h3>Settings</h3><span class="crumb">Vertex Steel Detailing</span></div>
+            <div class="sbody"><div class="pad">
+              <div class="grid2 even">
+                <div class="panel">
+                  <div class="panel-h"><h4>Documents</h4></div>
+                  <div class="settingrow"><div><div class="sr-t">Let clients download approved sheets</div><div class="sr-d">Superseded and in-review revisions stay view-only.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">Watermark in-review PDFs</div><div class="sr-d">Stamps "For review — not for construction" on the viewer copy.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">Allow markup pins on drawings</div><div class="sr-d">Clients can pin a comment to a page and grid reference.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">Auto-supersede previous revision</div><div class="sr-d">Applies when a new revision is issued for the same sheet.</div></div><span class="sw"></span></div>
+                </div>
+                <div class="panel">
+                  <div class="panel-h"><h4>File handling</h4></div>
+                  <div class="panel-b">
+                    <dl class="kv">
+                      <dt>allowed_types</dt><dd>pdf, dwg, dxf, xlsx, xls, png, jpg</dd>
+                      <dt>max_file_size</dt><dd>150 MB</dd>
+                      <dt>av_scan</dt><dd>On upload, before filing</dd>
+                      <dt>storage_root</dt><dd class="mono" style="font-size:11.5px">D:\CompanyPortalFiles\</dd>
+                      <dt>transport</dt><dd>WireGuard tunnel only</dd>
+                      <dt>db_backup</dt><dd>Nightly, 30-day retention</dd>
+                      <dt>file_backup</dt><dd>Nightly + weekly offsite</dd>
+                    </dl>
+                    <p style="font-size:12px;color:var(--muted);margin-top:11px">Rejected uploads are quarantined in <span class="mono">\Temp\</span> and never filed against a project.</p>
+                  </div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- PM PROFILE -->
+          <div class="screen" data-s="pm-profile">
+            <div class="topbar"><h3>Profile</h3><span class="crumb">Your account</span></div>
+            <div class="sbody"><div class="pad">
+              <div class="grid2 even">
+                <div class="panel">
+                  <div class="panel-b" style="display:flex;gap:14px;align-items:center">
+                    <span style="width:52px;height:52px;border-radius:11px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:700;font-family:'IBM Plex Sans Condensed',sans-serif">RD</span>
+                    <div><div style="font-size:17px;font-weight:700;color:var(--ink)">Rohan Deshmukh</div><div style="font-size:12.5px;color:var(--muted)">Project manager · Vertex Steel Detailing</div></div>
+                  </div>
+                  <div class="panel-b" style="border-top:1px solid var(--rule-2)">
+                    <dl class="kv">
+                      <dt>email</dt><dd>r.deshmukh@vertexsteel.com</dd>
+                      <dt>role</dt><dd>Project manager</dd>
+                      <dt>projects</dt><dd>11 assigned</dd>
+                      <dt>2fa</dt><dd>Authenticator app, enabled</dd>
+                      <dt>last_sign_in</dt><dd>Today 08:12 · Leeds</dd>
+                    </dl>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-h"><h4>Notify me about</h4></div>
+                  <div class="settingrow"><div><div class="sr-t">Client review decisions</div><div class="sr-d">Approved, approved with comments, revision required.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">New chat messages</div><div class="sr-d">Email digest if unread after 30 minutes.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">Overdue reviews</div><div class="sr-d">Daily at 08:00 for anything past 5 days.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">Weekly summary</div><div class="sr-d">Monday morning, all projects.</div></div><span class="sw off"></span></div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+        </main>
+      </div>
+    </div>
+    <!-- ============ CLIENT PORTAL ============ -->
+    <div class="rolewrap" id="roleCL">
+      <div class="app">
+        <aside class="rail">
+          <div class="rail-brand">
+            <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2.5 4.5h19M2.5 19.5h19M9.6 4.5v15M14.4 4.5v15"/></svg>
+            <span class="nm">SteelPro</span><span class="rail-role">Client</span>
+          </div>
+          <nav class="rail-nav" id="navCL">
+            <button data-s="cl-dash" aria-current="true"><svg class="i"><use href="#i-home"/></svg><span class="lb">Dashboard</span></button>
+            <button data-s="cl-projects"><svg class="i"><use href="#i-folder"/></svg><span class="lb">My projects</span></button>
+            <button data-s="cl-docs"><svg class="i"><use href="#i-file"/></svg><span class="lb">Documents</span></button>
+            <button data-s="cl-reviews"><svg class="i"><use href="#i-review"/></svg><span class="lb">Reviews</span><span class="pill">2</span></button>
+            <button data-s="cl-msgs"><svg class="i"><use href="#i-msg"/></svg><span class="lb">Messages</span><span class="pill">1</span></button>
+            <button data-s="cl-notif"><svg class="i"><use href="#i-bell"/></svg><span class="lb">Notifications</span></button>
+            <button data-s="cl-profile"><svg class="i"><use href="#i-user"/></svg><span class="lb">Profile</span></button>
+            <button data-logout><svg class="i"><use href="#i-out"/></svg><span class="lb">Log out</span></button>
+          </nav>
+          <div class="rail-foot">
+            <span class="av">JH</span>
+            <span class="who"><b>J. Harland</b><span>Harland Construction</span></span>
+          </div>
+        </aside>
+
+        <main class="ws">
+          <!-- CLIENT DASHBOARD -->
+          <div class="screen on" data-s="cl-dash">
+            <div class="topbar">
+              <h3>Your projects with Vertex Steel</h3>
+              <div class="tb-actions">
+                <button class="iconbtn"><svg class="i" style="font-size:15px"><use href="#i-bell"/></svg><span class="dotred"></span></button>
+                <button class="btn" data-goto="cl-reviews"><svg class="i"><use href="#i-review"/></svg> 2 drawings to review</button>
+              </div>
+            </div>
+            <div class="sbody"><div class="pad">
+              <dl class="stats">
+                <div class="stat"><dt>Projects</dt><dd>6</dd><div class="delta">with Vertex Steel</div></div>
+                <div class="stat"><dt>Active</dt><dd>3</dd><div class="delta">in progress now</div></div>
+                <div class="stat g"><dt>Completed</dt><dd>3</dd><div class="delta">last: 12 Jan 2026</div></div>
+                <div class="stat a"><dt>Pending your review</dt><dd>2</dd><div class="delta">1 waiting 6 days</div></div>
+                <div class="stat g"><dt>Approved documents</dt><dd>47</dd><div class="delta">available to download</div></div>
+                <div class="stat"><dt>Unread messages</dt><dd>1</dd><div class="delta">Northgate Warehouse</div></div>
+              </dl>
+
+              <div class="grid2">
+                <div class="panel">
+                  <div class="panel-h"><h4>Project progress</h4><span class="more" data-goto="cl-projects">All projects</span></div>
+                  <div class="tbl-scroll">
+                    <table>
+                      <thead><tr><th>Project</th><th>Current stage</th><th>Progress</th><th>Target</th><th></th></tr></thead>
+                      <tbody>
+                        <tr>
+                          <td><span class="name">Northgate Distribution Warehouse</span><span class="sub">PRJ-2026-014</span></td>
+                          <td><span class="badge b-warn">Your review</span></td>
+                          <td><div class="prog"><div class="track"><div class="bar" style="width:78%"></div></div><b>78%</b></div></td>
+                          <td class="sub">15 Mar</td>
+                          <td><button class="btn ghost sm" data-goto="cl-project">View</button></td>
+                        </tr>
+                        <tr>
+                          <td><span class="name">Northgate Yard Canopy</span><span class="sub">PRJ-2026-019</span></td>
+                          <td><span class="badge b-info">Steel detailing</span></td>
+                          <td><div class="prog"><div class="track"><div class="bar" style="width:38%"></div></div><b>38%</b></div></td>
+                          <td class="sub">02 May</td>
+                          <td><button class="btn ghost sm" data-goto="cl-project">View</button></td>
+                        </tr>
+                        <tr>
+                          <td><span class="name">Riverside Office Building, Frame B</span><span class="sub">PRJ-2025-108</span></td>
+                          <td><span class="badge b-ok">Completed</span></td>
+                          <td><div class="prog"><div class="track"><div class="bar g" style="width:100%"></div></div><b>100%</b></div></td>
+                          <td class="sub">12 Jan</td>
+                          <td><button class="btn ghost sm" data-goto="cl-project">View</button></td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="panel">
+                  <div class="panel-h"><h4>Waiting for you</h4><span class="more" data-goto="cl-reviews">Reviews</span></div>
+                  <ul class="feed">
+                    <li class="unread"><span class="ic a"><svg class="i"><use href="#i-file"/></svg></span><div class="txt"><b>E-201 Erection Plan, Level 2</b> <span class="rev">R1</span><time>issued 15 Sep · 6 days waiting</time></div></li>
+                    <li class="unread"><span class="ic a"><svg class="i"><use href="#i-file"/></svg></span><div class="txt"><b>C-014 Column Schedule, Grid A–F</b> <span class="rev">R3</span><time>issued today 09:38</time></div></li>
+                    <li><span class="ic g"><svg class="i"><use href="#i-check"/></svg></span><div class="txt">You approved <b>B-027 Beam Elevations</b> R2<time>Today 11:04</time></div></li>
+                    <li><span class="ic r"><svg class="i"><use href="#i-alert"/></svg></span><div class="txt">You requested a revision on <b>CD-008</b> R3<time>Today 14:22 · R4 expected tomorrow</time></div></li>
+                    <li><span class="ic a"><svg class="i"><use href="#i-msg"/></svg></span><div class="txt">1 unread message from <b>R. Deshmukh</b><time>Today 14:45</time></div></li>
+                  </ul>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- CLIENT PROJECTS -->
+          <div class="screen" data-s="cl-projects">
+            <div class="topbar"><h3>My projects</h3><span class="crumb">Harland Construction · 6 projects</span>
+              <div class="tb-actions"><span class="search"><svg class="i" style="font-size:13px"><use href="#i-search"/></svg> Search</span></div></div>
+            <div class="sbody"><div class="pad">
+              <div class="panel">
+                <div class="tbl-scroll"><table>
+                  <thead><tr><th>Project</th><th>Stage</th><th>Progress</th><th>Started</th><th>Target</th><th></th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="name">Northgate Distribution Warehouse</span><span class="sub">PRJ-2026-014 · 412 t</span></td><td><span class="badge b-warn">Client review</span></td><td><div class="prog"><div class="track"><div class="bar" style="width:78%"></div></div><b>78%</b></div></td><td class="sub">05 Jan</td><td class="sub">15 Mar</td><td><button class="btn ghost sm" data-goto="cl-project">View</button></td></tr>
+                    <tr><td><span class="name">Northgate Yard Canopy</span><span class="sub">PRJ-2026-019 · 58 t</span></td><td><span class="badge b-info">Steel detailing</span></td><td><div class="prog"><div class="track"><div class="bar" style="width:38%"></div></div><b>38%</b></div></td><td class="sub">14 Feb</td><td class="sub">02 May</td><td><button class="btn ghost sm" data-goto="cl-project">View</button></td></tr>
+                    <tr><td><span class="name">Depot Loading Gantry</span><span class="sub">PRJ-2026-027 · 22 t</span></td><td><span class="badge b-grey">Engineering</span></td><td><div class="prog"><div class="track"><div class="bar" style="width:12%"></div></div><b>12%</b></div></td><td class="sub">01 Sep</td><td class="sub">20 Jul</td><td><button class="btn ghost sm" data-goto="cl-project">View</button></td></tr>
+                    <tr><td><span class="name">Riverside Office Building, Frame B</span><span class="sub">PRJ-2025-108 · 640 t</span></td><td><span class="badge b-ok">Completed</span></td><td><div class="prog"><div class="track"><div class="bar g" style="width:100%"></div></div><b>100%</b></div></td><td class="sub">03 Jun 25</td><td class="sub">12 Jan 26</td><td><button class="btn ghost sm" data-goto="cl-project">View</button></td></tr>
+                  </tbody>
+                </table></div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- CLIENT PROJECT DETAIL -->
+          <div class="screen" data-s="cl-project">
+            <div class="topbar">
+              <button class="iconbtn" data-goto="cl-projects" aria-label="Back"><svg class="i" style="font-size:15px"><use href="#i-chevL"/></svg></button>
+              <h3>Northgate Distribution Warehouse</h3><span class="crumb">PRJ-2026-014</span>
+              <div class="tb-actions"><button class="btn ghost" data-goto="cl-msgs"><svg class="i"><use href="#i-msg"/></svg> Message the team</button></div>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel" style="margin-bottom:16px">
+                <div class="panel-b">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px">
+                    <span style="font-size:13px;font-weight:600;color:var(--ink)">Overall progress — currently in client review</span>
+                    <span class="mono" style="font-size:20px;font-weight:600;color:var(--ink)">78%</span>
+                  </div>
+                  <div class="track" style="height:9px"><div class="bar" style="width:78%"></div></div>
+                  <div class="stagestrip" style="margin-top:16px">
+                    <div class="stg done"><div class="n">01</div><div class="t">Received</div></div>
+                    <div class="stg done"><div class="n">02</div><div class="t">Engineering</div></div>
+                    <div class="stg done"><div class="n">03</div><div class="t">Steel detailing</div></div>
+                    <div class="stg done"><div class="n">04</div><div class="t">Internal review</div></div>
+                    <div class="stg now"><div class="n">05</div><div class="t">Client review</div></div>
+                    <div class="stg"><div class="n">06</div><div class="t">Revision</div></div>
+                    <div class="stg"><div class="n">07</div><div class="t">Client approval</div></div>
+                    <div class="stg"><div class="n">08</div><div class="t">Released</div></div>
+                    <div class="stg"><div class="n">09</div><div class="t">Fabrication</div></div>
+                    <div class="stg"><div class="n">10</div><div class="t">Completed</div></div>
+                  </div>
+                  <dl class="tb-grid" style="margin:8px -15px -14px;border-top:1px solid var(--rule)">
+                    <div class="tb-cell"><dt>Project code</dt><dd class="mono">PRJ-2026-014</dd></div>
+                    <div class="tb-cell"><dt>Detailer</dt><dd>Vertex Steel</dd></div>
+                    <div class="tb-cell"><dt>Started</dt><dd>05 Jan 2026</dd></div>
+                    <div class="tb-cell"><dt>Expected completion</dt><dd>15 Mar 2026</dd></div>
+                    <div class="tb-cell"><dt>Your manager</dt><dd>R. Deshmukh</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <div class="grid2">
+                <div class="panel">
+                  <div class="panel-h"><h4>Drawings for this project</h4><span class="more" data-goto="cl-docs">All documents</span></div>
+                  <div class="tbl-scroll"><table>
+                    <thead><tr><th>Drawing</th><th>Rev</th><th>Issued</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                      <tr><td><span class="name">C-014 Column Schedule, Grid A–F</span></td><td><span class="rev">R3</span></td><td class="sub">21 Sep</td><td><span class="badge b-warn">Your review</span></td><td><button class="btn sm" data-scroll="review">Review</button></td></tr>
+                      <tr><td><span class="name">E-201 Erection Plan, Level 2</span></td><td><span class="rev">R1</span></td><td class="sub">15 Sep</td><td><span class="badge b-warn">Your review</span></td><td><button class="btn sm" data-scroll="review">Review</button></td></tr>
+                      <tr><td><span class="name">B-027 Beam Elevations, Grid 3–6</span></td><td><span class="rev">R2</span></td><td class="sub">18 Sep</td><td><span class="badge b-ok">Approved</span></td><td><button class="btn ghost sm"><svg class="i"><use href="#i-down"/></svg></button></td></tr>
+                      <tr><td><span class="name">CD-008 Moment Connection, Grid B5</span></td><td><span class="rev">R3</span></td><td class="sub">16 Sep</td><td><span class="badge b-stop">Revision required</span></td><td><button class="btn ghost sm" data-scroll="review">View</button></td></tr>
+                    </tbody>
+                  </table></div>
+                </div>
+                <div class="panel">
+                  <div class="panel-h"><h4>What happened recently</h4></div>
+                  <ol class="tl" style="padding-top:12px">
+                    <li class="done"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-check"/></svg></i><s></s></span><span class="body"><b>You approved B-027 R2</b><time>Today 11:04</time></span></li>
+                    <li class="now"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-clock"/></svg></i><s></s></span><span class="body"><b>C-014 R3 issued to you</b><time>Today 09:38</time></span></li>
+                    <li class="done"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-check"/></svg></i><s></s></span><span class="body"><b>Stage moved to client review</b><time>20 Sep</time></span></li>
+                    <li class="done"><span class="mk"><i><svg class="i" style="font-size:11px"><use href="#i-check"/></svg></i><s></s></span><span class="body"><b>Internal review completed</b><time>05 Feb</time></span></li>
+                  </ol>
+                </div>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- CLIENT DOCUMENTS -->
+          <div class="screen" data-s="cl-docs">
+            <div class="topbar"><h3>Documents</h3><span class="crumb">Northgate Warehouse · 42 sheets</span>
+              <div class="tb-actions"><span class="search"><svg class="i" style="font-size:13px"><use href="#i-search"/></svg> Search drawings</span></div></div>
+            <div class="tabs" role="tablist">
+              <button role="tab" aria-selected="true">All</button>
+              <button role="tab" aria-selected="false">To review (2)</button>
+              <button role="tab" aria-selected="false">Approved (33)</button>
+              <button role="tab" aria-selected="false">Superseded</button>
+            </div>
+            <div class="sbody"><div class="pad">
+              <div class="panel">
+                <div class="tbl-scroll"><table>
+                  <thead><tr><th>Document</th><th>Type</th><th>Rev</th><th>Issued</th><th>Status</th><th></th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td><span class="name">C-014 Column Schedule, Grid A–F</span><span class="sub">2.4 MB · 18 pages</span></td>
+                      <td>Drawing</td><td><span class="rev">R3</span></td><td class="sub">21 Sep 2026</td>
+                      <td><span class="badge b-warn">Awaiting your review</span></td>
+                      <td><button class="btn sm" data-scroll="review">Review</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="name">E-201 Erection Plan, Level 2</span><span class="sub">3.1 MB · 6 pages</span></td>
+                      <td>Drawing</td><td><span class="rev">R1</span></td><td class="sub">15 Sep 2026</td>
+                      <td><span class="badge b-warn">Awaiting your review</span></td>
+                      <td><button class="btn sm" data-scroll="review">Review</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="name">B-027 Beam Elevations, Grid 3–6</span><span class="sub">1.8 MB · 12 pages</span></td>
+                      <td>Drawing</td><td><span class="rev">R2</span></td><td class="sub">18 Sep 2026</td>
+                      <td><span class="badge b-ok">Approved by you</span></td>
+                      <td><button class="btn ghost sm"><svg class="i"><use href="#i-down"/></svg> Download</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="name">CD-008 Moment Connection, Grid B5</span><span class="sub">940 KB · 5 pages</span></td>
+                      <td>Detail</td><td><span class="rev">R3</span></td><td class="sub">16 Sep 2026</td>
+                      <td><span class="badge b-stop">Revision required</span></td>
+                      <td><button class="btn ghost sm" data-scroll="review">View</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="name">CD-008 Moment Connection, Grid B5</span><span class="sub">Superseded by R3</span></td>
+                      <td>Detail</td><td><span class="rev">R2</span></td><td class="sub">02 Sep 2026</td>
+                      <td><span class="badge b-grey">Superseded</span></td>
+                      <td><button class="btn ghost sm">View</button></td>
+                    </tr>
+                    <tr>
+                      <td><span class="name">A-001 General Arrangement</span><span class="sub">4.6 MB · 3 pages</span></td>
+                      <td>Drawing</td><td><span class="rev">R2</span></td><td class="sub">28 Aug 2026</td>
+                      <td><span class="badge b-ok">Approved by you</span></td>
+                      <td><button class="btn ghost sm"><svg class="i"><use href="#i-down"/></svg> Download</button></td>
+                    </tr>
+                  </tbody>
+                </table></div>
+              </div>
+              <p style="font-size:12.5px;color:var(--muted);margin-top:12px">Downloads are available on approved revisions. Sheets still under review open in the viewer, watermarked <span class="mono">For review — not for construction</span>.</p>
+            </div></div>
+          </div>
+
+          <!-- CLIENT REVIEWS -->
+          <div class="screen" data-s="cl-reviews">
+            <div class="topbar"><h3>Reviews</h3><span class="crumb">2 waiting for you</span></div>
+            <div class="sbody"><div class="pad">
+              <div class="panel" style="margin-bottom:16px">
+                <div class="panel-h"><h4>Waiting for your decision</h4><span class="badge b-warn" style="margin-left:auto">2</span></div>
+                <div class="tbl-scroll"><table>
+                  <thead><tr><th>Drawing</th><th>Project</th><th>Rev</th><th>Issued</th><th>Waiting</th><th></th></tr></thead>
+                  <tbody>
+                    <tr><td><span class="name">E-201 Erection Plan, Level 2</span></td><td class="sub">Northgate Warehouse</td><td><span class="rev">R1</span></td><td class="sub">15 Sep</td><td><span class="badge b-stop">6 days</span></td><td><button class="btn sm" data-scroll="review">Open review</button></td></tr>
+                    <tr><td><span class="name">C-014 Column Schedule, Grid A–F</span></td><td class="sub">Northgate Warehouse</td><td><span class="rev">R3</span></td><td class="sub">21 Sep</td><td><span class="badge b-grey">today</span></td><td><button class="btn sm" data-scroll="review">Open review</button></td></tr>
+                  </tbody>
+                </table></div>
+              </div>
+              <div class="panel">
+                <div class="panel-h"><h4>Your review history</h4></div>
+                <ul class="feed">
+                  <li><span class="ic g"><svg class="i"><use href="#i-check"/></svg></span><div class="txt"><b>B-027 Beam Elevations, Grid 3–6</b> <span class="rev">R2</span> — approved, no comments<time>21 Sep 11:04</time></div></li>
+                  <li><span class="ic r"><svg class="i"><use href="#i-alert"/></svg></span><div class="txt"><b>CD-008 Moment Connection</b> <span class="rev">R3</span> — revision required, 2 comments<time>21 Sep 14:22</time></div></li>
+                  <li><span class="ic a"><svg class="i"><use href="#i-edit"/></svg></span><div class="txt"><b>CD-008 Moment Connection</b> <span class="rev">R2</span> — approved with comments<time>05 Sep 16:40</time></div></li>
+                  <li><span class="ic g"><svg class="i"><use href="#i-check"/></svg></span><div class="txt"><b>A-001 General Arrangement</b> <span class="rev">R2</span> — approved<time>28 Aug 09:15</time></div></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- CLIENT MESSAGES -->
+          <div class="screen" data-s="cl-msgs">
+            <div class="topbar"><h3>Messages</h3><span class="crumb">Northgate Warehouse</span>
+              <div class="tb-actions"><span class="badge b-info">Private to this project</span></div></div>
+            <div class="sbody nos">
+              <div class="chat">
+                <div class="threads">
+                  <div class="thread" aria-current="true"><span class="av">NW</span><span class="tb2"><span class="tn">Northgate Warehouse</span><span class="tp">R. Deshmukh · Seen. We'll take…</span></span><span class="cnt">1</span></div>
+                  <div class="thread"><span class="av">YC</span><span class="tb2"><span class="tn">Northgate Yard Canopy</span><span class="tp">R. Deshmukh · Detailing started</span></span></div>
+                  <div class="thread"><span class="av">LG</span><span class="tb2"><span class="tn">Depot Loading Gantry</span><span class="tp">No messages yet</span></span></div>
+                  <div class="thread"><span class="av">RO</span><span class="tb2"><span class="tn">Riverside Office, Frame B</span><span class="tp">Archived · completed</span></span></div>
+                </div>
+                <div class="convo">
+                  <div class="convo-h">
+                    <span class="av" style="width:30px;height:30px;border-radius:7px;background:var(--steel);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace">RD</span>
+                    <div><h4>R. Deshmukh · Vertex Steel</h4><span class="sub">PRJ-2026-014 · Northgate Warehouse</span></div>
+                  </div>
+                  <div class="msgs" id="clMsgs">
+                    <div class="daysep"><span>Today · 21 Sep 2026</span></div>
+                    <div class="msg">
+                      <span class="av">RD</span>
+                      <div class="bub"><span class="who">R. Deshmukh · Project manager<time>09:41</time></span>C-014 Column Schedule R3 is uploaded and issued for review. The shim note you raised on R2 is now note 7.
+                        <div class="attach"><span class="ft">PDF</span><span class="fi"><b>C-014_ColSchedule_R3.pdf</b><span>2.4 MB</span></span></div>
+                      </div>
+                    </div>
+                    <div class="msg me">
+                      <span class="av">JH</span>
+                      <div><div class="bub"><span class="who">You<time>14:22</time></span>One issue on CD-008 — the bolt group at B5 fouls the brace gusset. I've pinned it on page 4 and marked the sheet for revision.</div><div class="reads">Read 14:40 <svg class="i" style="font-size:11px"><use href="#i-check"/></svg></div></div>
+                    </div>
+                    <div class="msg">
+                      <span class="av">RD</span>
+                      <div class="bub"><span class="who">R. Deshmukh · Project manager<time>14:45</time></span>Seen. We'll take it to 4 no. M24 and reissue as R4 tomorrow morning. The erection plan E-201 is still open with you from the 15th — any comments on that one?</div>
+                    </div>
+                  </div>
+                  <div class="composer">
+                    <button class="iconbtn" aria-label="Attach file"><svg class="i" style="font-size:15px"><use href="#i-clip"/></svg></button>
+                    <input id="clInput" placeholder="Write a message…" aria-label="Write a message">
+                    <button class="send" id="clSend" aria-label="Send message"><svg class="i" style="font-size:16px"><use href="#i-send"/></svg></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- CLIENT NOTIFICATIONS -->
+          <div class="screen" data-s="cl-notif">
+            <div class="topbar"><h3>Notifications</h3><span class="crumb">3 unread</span>
+              <div class="tb-actions"><button class="btn ghost"><svg class="i"><use href="#i-check"/></svg> Mark all read</button></div></div>
+            <div class="sbody"><div class="pad">
+              <div class="panel">
+                <ul class="feed">
+                  <li class="unread"><span class="ic a"><svg class="i"><use href="#i-review"/></svg></span><div class="txt"><b>Review needed</b> — C-014 Column Schedule R3 has been issued to you<time>Today 09:38 · Northgate Warehouse</time></div></li>
+                  <li class="unread"><span class="ic a"><svg class="i"><use href="#i-msg"/></svg></span><div class="txt"><b>New message</b> — R. Deshmukh replied about CD-008<time>Today 14:45 · Northgate Warehouse</time></div></li>
+                  <li class="unread"><span class="ic"><svg class="i"><use href="#i-clock"/></svg></span><div class="txt"><b>Reminder</b> — E-201 Erection Plan R1 has been waiting 6 days<time>Today 08:00 · Northgate Warehouse</time></div></li>
+                  <li><span class="ic"><svg class="i"><use href="#i-chart"/></svg></span><div class="txt"><b>Progress updated</b> — Northgate Warehouse moved to 78%<time>20 Sep · Northgate Warehouse</time></div></li>
+                  <li><span class="ic"><svg class="i"><use href="#i-folder"/></svg></span><div class="txt"><b>Stage changed</b> — now in Client review<time>20 Sep · Northgate Warehouse</time></div></li>
+                  <li><span class="ic g"><svg class="i"><use href="#i-check"/></svg></span><div class="txt"><b>Revision uploaded</b> — CD-008 R3 replaced R2<time>16 Sep · Northgate Warehouse</time></div></li>
+                </ul>
+              </div>
+            </div></div>
+          </div>
+
+          <!-- CLIENT PROFILE -->
+          <div class="screen" data-s="cl-profile">
+            <div class="topbar"><h3>Profile</h3><span class="crumb">Harland Construction</span></div>
+            <div class="sbody"><div class="pad">
+              <div class="grid2 even">
+                <div class="panel">
+                  <div class="panel-b" style="display:flex;gap:14px;align-items:center">
+                    <span style="width:52px;height:52px;border-radius:11px;background:var(--steel);color:#fff;display:grid;place-items:center;font-size:18px;font-weight:700;font-family:'IBM Plex Sans Condensed',sans-serif">JH</span>
+                    <div><div style="font-size:17px;font-weight:700;color:var(--ink)">James Harland</div><div style="font-size:12.5px;color:var(--muted)">Contracts manager · Harland Construction Ltd</div></div>
+                  </div>
+                  <div class="panel-b" style="border-top:1px solid var(--rule-2)">
+                    <dl class="kv">
+                      <dt>email</dt><dd>j.harland@harlandconstruction.co.uk</dd>
+                      <dt>company</dt><dd>Harland Construction (CL-001)</dd>
+                      <dt>access</dt><dd>6 projects, your company only</dd>
+                      <dt>downloads</dt><dd>Approved revisions</dd>
+                      <dt>password</dt><dd>Changed 04 Aug 2026</dd>
+                    </dl>
+                  </div>
+                </div>
+                <div class="panel">
+                  <div class="panel-h"><h4>Email me when</h4></div>
+                  <div class="settingrow"><div><div class="sr-t">A drawing is issued for my review</div><div class="sr-d">Straight away, with a link into the viewer.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">A revision I commented on is reissued</div><div class="sr-d">So you can check your comment was picked up.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">Someone messages me on a project</div><div class="sr-d">Only for projects you're named on.</div></div><span class="sw"></span></div>
+                  <div class="settingrow"><div><div class="sr-t">Project progress changes</div><div class="sr-d">Weekly, not every update.</div></div><span class="sw off"></span></div>
+                </div>
+              </div>
+            </div></div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div><!-- /frame -->
+</section>
+
+<!-- ============ DOCUMENT REVIEW ============ -->
+<section id="review" class="wrap">
+  <div class="sec-head">
+    <span class="idx">C</span>
+    <h2>Reviewing a drawing</h2>
+    <p>The sheet opens in the browser, streamed through the API — no download needed to give a decision. A comment can be pinned to a page and a grid reference, so nobody has to describe where they mean.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="urlbar"><svg class="i" style="font-size:12px;color:var(--ok)"><use href="#i-lock"/></svg><span>portal.vertexsteel.com/projects/PRJ-2026-014/documents/CD-008/r3/review</span></span>
+    </div>
+    <div style="height:660px">
+      <div class="viewer">
+        <div class="vmain">
+          <div class="vtool">
+            <span class="docname">CD-008 Moment Connection Detail, Grid B5 <span class="rev">R3</span></span>
+            <span class="grp">
+              <button aria-label="Previous page"><svg class="i" style="font-size:14px"><use href="#i-chevL"/></svg></button>
+              <span class="pg">4 / 5</span>
+              <button aria-label="Next page"><svg class="i" style="font-size:14px"><use href="#i-chevR"/></svg></button>
+            </span>
+            <span class="grp">
+              <button aria-label="Zoom out"><svg class="i" style="font-size:14px"><use href="#i-zout"/></svg></button>
+              <span class="pg">100%</span>
+              <button aria-label="Zoom in"><svg class="i" style="font-size:14px"><use href="#i-zin"/></svg></button>
+            </span>
+            <span class="grp">
+              <button aria-label="Search in document"><svg class="i" style="font-size:14px"><use href="#i-search"/></svg></button>
+              <button aria-label="Full screen"><svg class="i" style="font-size:14px"><use href="#i-expand"/></svg></button>
+              <button id="pinTool" class="on" aria-pressed="true" aria-label="Place a comment pin"><svg class="i" style="font-size:14px"><use href="#i-pin"/></svg></button>
+              <button aria-label="Download" title="Downloads unlock on approval" style="opacity:.45"><svg class="i" style="font-size:14px"><use href="#i-down"/></svg></button>
+            </span>
+          </div>
+          <div class="vstage">
+            <div class="sheetwrap" id="sheetWrap" style="width:min(100%,560px)">
+              <svg viewBox="0 0 560 400" role="img" aria-label="Structural steel moment connection detail: beam to column with bolted end plate, stiffeners and dimensions.">
+                <rect width="560" height="400" fill="#fff"/>
+                <rect x="8" y="8" width="544" height="384" fill="none" stroke="#17222E" stroke-width="1.2"/>
+                <g stroke="#17222E" fill="none" stroke-width="1.4">
+                  <!-- column -->
+                  <rect x="96" y="44" width="52" height="300"/>
+                  <line x1="112" y1="44" x2="112" y2="344"/><line x1="132" y1="44" x2="132" y2="344"/>
+                  <!-- beam -->
+                  <rect x="168" y="150" width="230" height="64"/>
+                  <line x1="168" y1="164" x2="398" y2="164"/><line x1="168" y1="200" x2="398" y2="200"/>
+                  <!-- end plate -->
+                  <rect x="152" y="136" width="16" height="92" fill="#E9F1F9"/>
+                  <!-- stiffeners -->
+                  <line x1="112" y1="150" x2="132" y2="150"/><line x1="112" y1="214" x2="132" y2="214"/>
+                  <!-- haunch -->
+                  <path d="M168 214 L168 240 L250 214"/>
+                </g>
+                <!-- bolts -->
+                <g fill="none" stroke="#17222E" stroke-width="1.3">
+                  <circle cx="160" cy="146" r="4.2"/><circle cx="160" cy="170" r="4.2"/>
+                  <circle cx="160" cy="194" r="4.2"/><circle cx="160" cy="218" r="4.2"/>
+                </g>
+                <!-- weld symbols -->
+                <g stroke="#17222E" stroke-width="1.1" fill="none">
+                  <path d="M168 150 l-8 -22 h34"/><path d="M160 128 l6 8 6 -8" fill="none"/>
+                </g>
+                <text x="178" y="122" font-family="IBM Plex Mono, monospace" font-size="9" fill="#17222E">6 CFW ALL ROUND</text>
+                <!-- dimensions -->
+                <g stroke="#2D6CA8" stroke-width=".9">
+                  <line x1="128" y1="146" x2="80" y2="146"/><line x1="128" y1="218" x2="80" y2="218"/>
+                  <line x1="86" y1="146" x2="86" y2="218"/>
+                  <path d="M86 146 l-3 6 h6z" fill="#2D6CA8" stroke="none"/><path d="M86 218 l-3 -6 h6z" fill="#2D6CA8" stroke="none"/>
+                  <line x1="398" y1="214" x2="398" y2="262"/><line x1="168" y1="228" x2="168" y2="262"/>
+                  <line x1="168" y1="256" x2="398" y2="256"/>
+                  <path d="M168 256 l6 -3 v6z" fill="#2D6CA8" stroke="none"/><path d="M398 256 l-6 -3 v6z" fill="#2D6CA8" stroke="none"/>
+                </g>
+                <text x="60" y="186" font-family="IBM Plex Mono, monospace" font-size="9" fill="#2D6CA8" transform="rotate(-90 60 186)">3 @ 24 = 72</text>
+                <text x="246" y="271" font-family="IBM Plex Mono, monospace" font-size="9" fill="#2D6CA8">BEAM CL TO COLUMN FACE</text>
+                <!-- grid bubble -->
+                <g><circle cx="122" cy="28" r="14" fill="#fff" stroke="#17222E" stroke-width="1.2"/><text x="122" y="32" text-anchor="middle" font-family="IBM Plex Mono, monospace" font-size="11" font-weight="600" fill="#17222E">B5</text>
+                <line x1="122" y1="42" x2="122" y2="44" stroke="#17222E"/></g>
+                <!-- callouts -->
+                <g font-family="IBM Plex Mono, monospace" font-size="8.5" fill="#17222E">
+                  <text x="408" y="168">UB 406x178x60</text>
+                  <text x="408" y="182">BEAM B-27</text>
+                  <text x="42" y="360">UC 254x254x89</text>
+                  <text x="176" y="250">PL 12 HAUNCH</text>
+                  <text x="176" y="146">END PL 25 THK</text>
+                  <text x="176" y="236">4 No. M20 8.8</text>
+                </g>
+                <!-- title block -->
+                <g>
+                  <rect x="330" y="298" width="222" height="94" fill="#fff" stroke="#17222E" stroke-width="1.2"/>
+                  <line x1="330" y1="322" x2="552" y2="322" stroke="#17222E" stroke-width=".9"/>
+                  <line x1="330" y1="346" x2="552" y2="346" stroke="#17222E" stroke-width=".9"/>
+                  <line x1="330" y1="370" x2="552" y2="370" stroke="#17222E" stroke-width=".9"/>
+                  <line x1="452" y1="346" x2="452" y2="392" stroke="#17222E" stroke-width=".9"/>
+                  <g font-family="IBM Plex Sans Condensed, sans-serif" font-size="10.5" font-weight="700" fill="#0B2545">
+                    <text x="338" y="315">VERTEX STEEL DETAILING</text>
+                  </g>
+                  <g font-family="IBM Plex Mono, monospace" font-size="8" fill="#5C6B7C">
+                    <text x="338" y="337">MOMENT CONNECTION — GRID B5</text>
+                    <text x="338" y="360">DWG No.</text><text x="338" y="385">SCALE 1:10</text>
+                    <text x="460" y="360">REV</text><text x="460" y="385">DATE</text>
+                  </g>
+                  <g font-family="IBM Plex Mono, monospace" font-size="10" font-weight="600" fill="#17222E">
+                    <text x="386" y="360">CD-008</text><text x="482" y="360">R3</text><text x="494" y="385">16.09.26</text>
+                  </g>
+                </g>
+                <text x="20" y="384" font-family="IBM Plex Mono, monospace" font-size="8" fill="#B3312A">FOR REVIEW — NOT FOR CONSTRUCTION</text>
+              </svg>
+              <button class="pin sel" style="left:29%;top:50%" data-pin="1" aria-label="Comment 1 at grid B5"><span>1</span></button>
+              <button class="pin" style="left:23%;top:39%" data-pin="2" aria-label="Comment 2 at grid C3"><span>2</span></button>
+              <button class="pin ok" style="left:72%;top:44%" data-pin="3" aria-label="Comment 3, answered"><span>3</span></button>
+              <div class="pincall" style="left:34%;top:54%">
+                <b>Pin 1 · Page 4 · Grid B5</b>
+                Bolt group clashes with the brace gusset. Revise to 4 no. M24 8.8 or shift the work point 75 mm.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="vside">
+          <div class="vside-h">
+            <h4>Your review</h4>
+            <p>CD-008 · R3 · issued 16 Sep 2026</p>
+          </div>
+          <div class="radios" id="reviewRadios">
+            <label class="radio" data-tone="ok">
+              <input type="radio" name="decision">
+              <span><span class="rt">Approved</span><span class="rd">Released for fabrication as drawn.</span></span>
+            </label>
+            <label class="radio" data-tone="warn">
+              <input type="radio" name="decision">
+              <span><span class="rt">Approved with comments</span><span class="rd">Proceed, and take the comments into the next revision.</span></span>
+            </label>
+            <label class="radio sel-stop" data-tone="stop">
+              <input type="radio" name="decision" checked>
+              <span><span class="rt">Revision required</span><span class="rd">Do not fabricate. A new revision must come back for review.</span></span>
+            </label>
+          </div>
+          <div class="field">
+            <label for="cmtBox">Comments</label>
+            <textarea class="ta" id="cmtBox" placeholder="Enter your comments…">Please revise the connection at Grid B5 before fabrication. Stiffener thickness at C3 also needs checking against PL 12.</textarea>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:9px">
+              <button class="btn" style="flex:1;justify-content:center" id="submitReview">Submit review</button>
+              <button class="iconbtn" aria-label="Attach a file"><svg class="i" style="font-size:15px"><use href="#i-clip"/></svg></button>
+            </div>
+            <p style="font-size:11.5px;color:var(--muted-2);margin-top:8px;line-height:1.45">Your decision is recorded against revision R3 and the project manager is notified immediately.</p>
+          </div>
+          <div class="panel-h" style="border-top:1px solid var(--rule)"><h4>Pinned comments</h4><span class="badge b-stop" style="margin-left:auto">2 open</span></div>
+          <div class="cmt"><span class="num">1</span><div class="c-b"><div class="c-m"><b>You</b><span class="loc">P4 · B5</span></div><p>Bolt group clashes with the brace gusset. Revise to 4 no. M24 8.8 or shift the work point 75 mm.</p><time>Today 14:22</time></div></div>
+          <div class="cmt"><span class="num">2</span><div class="c-b"><div class="c-m"><b>P. Okafor</b><span class="loc">P4 · C3</span></div><p>Stiffener shown 10 mm, structural drawings call for PL 12. Please confirm.</p><time>Today 14:31</time></div></div>
+          <div class="cmt"><span class="num ok">3</span><div class="c-b"><div class="c-m"><b>You</b><span class="loc">P4 · D2</span><span class="badge b-ok">Answered</span></div><p>Beam camber not noted at the splice. — 12 mm camber added to the beam table on R3.</p><time>16 Sep 10:05</time></div></div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <div class="archnotes">
+    <div class="note"><h4>Streamed, never linked</h4><p>The viewer asks the API for the file. The API checks the session, the project and the document, then pulls the PDF over the VPN. The browser never sees a file server path.</p></div>
+    <div class="note red"><h4>A decision closes a revision</h4><p>Submitting a review writes the outcome against R3 and opens R4 in the register. R3 stays exactly as it was issued, comments and all.</p></div>
+    <div class="note green"><h4>Pins carry coordinates</h4><p>Each pin stores page, x/y on the sheet and the grid reference the detailer reads. The PM sees them on the same drawing, in the same place.</p></div>
+  </div>
+</section>
+<section id="auth" class="wrap">
+  <div class="sec-head">
+    <span class="idx">D</span>
+    <h2>Getting a client in</h2>
+    <p>The PM creates the account; the client sets their own password. No shared logins, no passwords sent by email, and access limited to their own company from the first sign-in.</p>
+  </div>
+
+  <div class="authgrid">
+    <div class="authcard">
+      <div class="cap">Step 1 <span>PM sends the invitation</span></div>
+      <div class="authbody">
+        <div class="mail">
+          <div class="mail-h">From: no-reply@vertexsteel.com<br>To: m.caldwell@caldwell-energy.co.uk<br>Subject: Your Vertex Steel project portal</div>
+          <div class="mail-b">
+            <p style="font-weight:600;color:var(--ink);margin-bottom:8px">Hello Mark,</p>
+            <p>Rohan Deshmukh has set up portal access for Caldwell Energy so you can follow progress, review drawings and message the team.</p>
+            <p style="margin-top:9px">Set your password to get started. This link works once and expires in 72 hours.</p>
+            <div class="btn" style="margin-top:12px;justify-content:center;width:100%">Set your password</div>
+            <p style="margin-top:11px;font-size:11.5px;color:var(--muted-2)">If you weren't expecting this, ignore the email — the account stays inactive.</p>
+          </div>
+        </div>
+        <p style="margin-top:auto">Single-use token, hashed in the database, tied to one email address and one client account.</p>
+      </div>
+    </div>
+
+    <div class="authcard">
+      <div class="cap">Step 2 <span>Client sets a password</span></div>
+      <div class="authbody">
+        <h4>Set your password</h4>
+        <p>You're joining as <b style="color:var(--ink)">Caldwell Energy</b>. Your email is confirmed from the invitation.</p>
+        <div>
+          <label class="inp-l">Email</label>
+          <div class="inp filled" style="background:var(--paper)">m.caldwell@caldwell-energy.co.uk</div>
+        </div>
+        <div>
+          <label class="inp-l">New password</label>
+          <div class="inp filled">••••••••••••••</div>
+          <div class="meter"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+          <ul class="reqs">
+            <li><svg class="i"><use href="#i-check"/></svg> At least 12 characters</li>
+            <li><svg class="i"><use href="#i-check"/></svg> Not found in a breach list</li>
+            <li><svg class="i"><use href="#i-check"/></svg> Different from your email</li>
+          </ul>
+        </div>
+        <div>
+          <label class="inp-l">Confirm password</label>
+          <div class="inp filled">••••••••••••••</div>
+        </div>
+        <button class="btn" style="justify-content:center">Set password and sign in</button>
+        <p style="font-size:11.5px;color:var(--muted-2)">Stored as an Argon2id hash. Vertex Steel never sees it.</p>
+      </div>
+    </div>
+
+    <div class="authcard">
+      <div class="cap">Step 3 <span>Everyday sign-in</span></div>
+      <div class="authbody">
+        <div style="display:flex;align-items:center;gap:9px;color:var(--ink)">
+          <svg class="glyph" style="width:26px;height:26px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2.5 4.5h19M2.5 19.5h19M9.6 4.5v15M14.4 4.5v15"/></svg>
+          <span style="font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:700;font-size:19px">SteelPro Portal</span>
+        </div>
+        <h4 style="margin-top:4px">Sign in</h4>
+        <div><label class="inp-l">Email</label><div class="inp">you@company.com</div></div>
+        <div><label class="inp-l">Password</label><div class="inp">••••••••</div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:12.5px;color:var(--muted)">
+          <span style="display:flex;align-items:center;gap:7px"><span style="width:15px;height:15px;border:1px solid var(--rule);border-radius:4px;display:inline-block"></span> Keep me signed in</span>
+          <span style="color:var(--steel);font-weight:600">Forgot password</span>
+        </div>
+        <button class="btn" style="justify-content:center">Sign in</button>
+        <div style="border-top:1px solid var(--rule-2);padding-top:12px;margin-top:2px">
+          <dl class="kv" style="border-top:0">
+            <dt>session</dt><dd>15-min access token</dd>
+            <dt>refresh</dt><dd>HttpOnly, rotating</dd>
+            <dt>lockout</dt><dd>5 attempts, then 15 min</dd>
+            <dt>routing</dt><dd>Role decides the portal</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="storage" class="wrap">
+  <div class="sec-head">
+    <span class="idx">E</span>
+    <h2>Where things actually live</h2>
+    <p>One row in Postgres, one file on the Windows server, and a path the application owns from end to end. Clients and projects get their folders the moment they're created.</p>
+  </div>
+
+  <div class="grid2" style="margin-top:0">
+    <div class="card" style="padding:18px">
+      <h4 style="font-size:15px;color:var(--page-ink);margin-bottom:12px">File server layout</h4>
+      <pre class="tree"><span class="d">D:\CompanyPortalFiles\</span>
+└── <span class="d">Clients\</span>
+    ├── <span class="d">Client-001\</span>            <span class="c">Harland Construction</span>
+    │   └── <span class="d">Projects\</span>
+    │       └── <span class="d">Project-001\</span>    <span class="c">PRJ-2026-014</span>
+    │           ├── <span class="d">Drawings\</span>
+    │           ├── <span class="d">Documents\</span>
+    │           ├── <span class="d">Revisions\</span>
+    │           │   ├── R0\  R1\  R2\
+    │           │   └── R3\  <span class="c">← current issue</span>
+    │           ├── <span class="d">Client-Review\</span>
+    │           └── <span class="d">Approved\</span>
+    └── <span class="d">Client-002\</span>            <span class="c">Meridian Industrial</span>
+└── <span class="d">Temp\</span>                      <span class="c">AV scan staging</span></pre>
+      <p style="font-size:12.5px;color:var(--page-muted);margin-top:12px">Paths are generated from the client and project records, never typed by hand and never accepted from the browser. A request carries a document ID; the server resolves the rest.</p>
+    </div>
+
+    <div class="card" style="padding:18px">
+      <h4 style="font-size:15px;color:var(--page-ink);margin-bottom:6px">documents — one row per revision</h4>
+      <dl class="kv">
+        <dt>document_id</dt><dd>uuid</dd>
+        <dt>project_id</dt><dd>uuid → projects</dd>
+        <dt>file_name</dt><dd>CD-008_MomentConn_R3.pdf</dd>
+        <dt>file_type</dt><dd>pdf · dwg · dxf · xlsx · image</dd>
+        <dt>revision</dt><dd>R3</dd>
+        <dt>status</dt><dd>draft · issued · superseded · released</dd>
+        <dt>file_path</dt><dd style="font-size:11.5px">…\Project-001\Revisions\R3\</dd>
+        <dt>uploaded_by</dt><dd>uuid → users</dd>
+        <dt>uploaded_at</dt><dd>2026-09-16 09:12 UTC</dd>
+        <dt>review_status</dt><dd>pending · approved · approved_with_comments · revision_required</dd>
+      </dl>
+      <div style="margin-top:14px">
+        <h4 style="font-size:14px;color:var(--page-ink);margin-bottom:7px">Revision chain, CD-008</h4>
+        <div class="chain">
+          <span class="r">R0</span><span class="ar">→</span><span class="r">R1</span><span class="ar">→</span><span class="r">R2</span><span class="ar">→</span><span class="r cur">R3</span>
+        </div>
+        <p style="font-size:12.5px;color:var(--page-muted);margin-top:10px">Each link is a separate row and a separate file. Superseded revisions stay readable forever — that history is what settles a dispute about what was approved and when.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="security" class="wrap">
+  <div class="sec-head">
+    <span class="idx">F</span>
+    <h2>Security posture</h2>
+    <p>Two things protect the drawings: the tunnel, and the authorisation check that runs before anything is read from it.</p>
+  </div>
+  <ul class="seclist">
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>HTTPS everywhere</b><span>TLS 1.3 at Nginx, HSTS, modern ciphers only.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Short-lived JWTs</b><span>15-minute access token, rotating HttpOnly refresh token.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Role-based access</b><span>Admin, PM, detailer, client — resolved server side.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Project scoping</b><span>Every query filters by the client the user belongs to.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Document authorisation</b><span>Checked per document and per revision, not per folder.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Argon2id hashing</b><span>Per-user salt, tuned work factor, no password ever emailed.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Audit log</b><span>Views, downloads, uploads, reviews and stage changes, with IP.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Rate limiting</b><span>Per IP and per account on login, upload and download.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Upload validation</b><span>Extension and magic-byte check, 150 MB ceiling, AV scan before filing.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Encrypted tunnel</b><span>WireGuard or IPsec, keys held on the VPS and the firewall only.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>No public SMB</b><span>Port 445 never leaves the company network. No inbound rule exists.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Backups</b><span>Nightly Postgres dumps, nightly file replication, weekly offsite copy.</span></div></li>
+  </ul>
+
+  <div class="card" style="margin-top:16px;padding:18px">
+    <h4 style="font-size:15px;color:var(--page-ink);margin-bottom:8px">What a client can reach</h4>
+    <p style="font-size:13.5px;color:var(--page-muted);max-width:78ch;line-height:1.6">A signed-in client sees the projects belonging to their company and nothing else — not a project list, not a search result, not a document ID guessed from a URL. The check happens on the server for every request, including the one that streams a PDF into the viewer. Downloads follow the company policy set per client: approved revisions only, or view-only throughout.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="mono">SteelPro Portal · system design pack · R1 · 21 Sep 2026</span>
+    <span style="margin-left:auto" class="mono">Progress tracking · Document review · Client communication</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root=document.documentElement;
+  var tbtn=document.getElementById('themeBtn');
+  if(tbtn){tbtn.addEventListener('click',function(){
+    var cur=root.getAttribute('data-theme');
+    if(!cur){cur=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}
+    root.setAttribute('data-theme',cur==='dark'?'light':'dark');
+  });}
+
+  var paths={'pm-dash':'/pm/dashboard','pm-clients':'/pm/clients','pm-projects':'/pm/projects','pm-project':'/pm/projects/PRJ-2026-014','pm-docs':'/pm/projects/PRJ-2026-014/documents','pm-reviews':'/pm/reviews','pm-msgs':'/pm/messages/PRJ-2026-014','pm-notif':'/pm/notifications','pm-reports':'/pm/reports','pm-settings':'/pm/settings','pm-profile':'/pm/profile','cl-dash':'/dashboard','cl-projects':'/projects','cl-project':'/projects/PRJ-2026-014','cl-docs':'/projects/PRJ-2026-014/documents','cl-reviews':'/reviews','cl-msgs':'/messages/PRJ-2026-014','cl-notif':'/notifications','cl-profile':'/profile'};
+  var urlText=document.getElementById('urlText');
+
+  function show(id){
+    var wrap=id.indexOf('pm-')===0?document.getElementById('rolePM'):document.getElementById('roleCL');
+    var scr=wrap.querySelectorAll('.screen');
+    for(var i=0;i<scr.length;i++){scr[i].classList.toggle('on',scr[i].getAttribute('data-s')===id);}
+    var nav=wrap.querySelectorAll('.rail-nav button');
+    for(var j=0;j<nav.length;j++){
+      var d=nav[j].getAttribute('data-s');
+      if(d){nav[j].setAttribute('aria-current',d===id?'true':'false');}
+    }
+    if(urlText){urlText.textContent='portal.vertexsteel.com'+(paths[id]||'/');}
+  }
+
+  function bindNav(navId){
+    var nav=document.getElementById(navId);
+    if(!nav)return;
+    nav.addEventListener('click',function(e){
+      var b=e.target.closest('button');if(!b)return;
+      if(b.hasAttribute('data-logout')){
+        document.getElementById('auth').scrollIntoView({behavior:'smooth',block:'start'});return;
+      }
+      var s=b.getAttribute('data-s');if(s)show(s);
+    });
+  }
+  bindNav('navPM');bindNav('navCL');
+
+  document.addEventListener('click',function(e){
+    var g=e.target.closest('[data-goto]');
+    if(g){show(g.getAttribute('data-goto'));return;}
+    var s=e.target.closest('[data-scroll]');
+    if(s){var t=document.getElementById(s.getAttribute('data-scroll'));if(t)t.scrollIntoView({behavior:'smooth',block:'start'});return;}
+  });
+
+  var pm=document.getElementById('btnPM'),cl=document.getElementById('btnCL');
+  function role(r){
+    var isPM=r==='pm';
+    pm.setAttribute('aria-pressed',isPM?'true':'false');
+    cl.setAttribute('aria-pressed',isPM?'false':'true');
+    document.getElementById('rolePM').classList.toggle('on',isPM);
+    document.getElementById('roleCL').classList.toggle('on',!isPM);
+    show(isPM?'pm-dash':'cl-dash');
+  }
+  pm.addEventListener('click',function(){role('pm');});
+  cl.addEventListener('click',function(){role('cl');});
+
+  /* tabs */
+  var tabsets=document.querySelectorAll('.tabs');
+  for(var t=0;t<tabsets.length;t++){
+    tabsets[t].addEventListener('click',function(e){
+      var b=e.target.closest('button');if(!b)return;
+      var all=this.querySelectorAll('button');
+      for(var k=0;k<all.length;k++){all[k].setAttribute('aria-selected',all[k]===b?'true':'false');}
+    });
+  }
+
+  /* chat threads */
+  var thr=document.querySelectorAll('.threads');
+  for(var q=0;q<thr.length;q++){
+    thr[q].addEventListener('click',function(e){
+      var th=e.target.closest('.thread');if(!th)return;
+      var all=this.querySelectorAll('.thread');
+      for(var k=0;k<all.length;k++){all[k].setAttribute('aria-current',all[k]===th?'true':'false');}
+      var c=th.querySelector('.cnt');if(c)c.remove();
+    });
+  }
+
+  /* composer */
+  function wireChat(inputId,btnId,listId,who){
+    var input=document.getElementById(inputId),btn=document.getElementById(btnId),list=document.getElementById(listId);
+    if(!input||!btn||!list)return;
+    function send(){
+      var v=input.value.trim();if(!v)return;
+      var d=new Date();
+      var hh=('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+      var el=document.createElement('div');
+      el.className='msg me';
+      var av=document.createElement('span');av.className='av';av.textContent=who.initials;
+      var col=document.createElement('div');
+      var bub=document.createElement('div');bub.className='bub';
+      var whoEl=document.createElement('span');whoEl.className='who';
+      whoEl.appendChild(document.createTextNode(who.label));
+      var tm=document.createElement('time');tm.textContent=hh;whoEl.appendChild(tm);
+      bub.appendChild(whoEl);bub.appendChild(document.createTextNode(v));
+      var rd=document.createElement('div');rd.className='reads';rd.textContent='Sending…';
+      col.appendChild(bub);col.appendChild(rd);
+      el.appendChild(av);el.appendChild(col);
+      list.appendChild(el);
+      input.value='';
+      list.scrollTop=list.scrollHeight;
+      setTimeout(function(){rd.textContent='Delivered';},700);
+    }
+    btn.addEventListener('click',send);
+    input.addEventListener('keydown',function(e){if(e.key==='Enter')send();});
+  }
+  wireChat('pmInput','pmSend','pmMsgs',{initials:'RD',label:'You · Project manager'});
+  wireChat('clInput','clSend','clMsgs',{initials:'JH',label:'You'});
+
+  /* review decision */
+  var radios=document.getElementById('reviewRadios');
+  if(radios){
+    radios.addEventListener('change',function(){
+      var ls=this.querySelectorAll('.radio');
+      for(var k=0;k<ls.length;k++){
+        var on=ls[k].querySelector('input').checked;
+        ls[k].classList.remove('sel-ok','sel-warn','sel-stop');
+        if(on){ls[k].classList.add('sel-'+ls[k].getAttribute('data-tone'));}
+      }
+    });
+  }
+  var sub=document.getElementById('submitReview');
+  if(sub){
+    sub.addEventListener('click',function(){
+      var old=sub.textContent;
+      sub.textContent='Review submitted';
+      sub.style.background='var(--ok)';sub.style.borderColor='var(--ok)';
+      setTimeout(function(){sub.textContent=old;sub.style.background='';sub.style.borderColor='';},1800);
+    });
+  }
+
+  /* pins */
+  var pinData={
+    '1':{t:'Pin 1 · Page 4 · Grid B5',b:'Bolt group clashes with the brace gusset. Revise to 4 no. M24 8.8 or shift the work point 75 mm.',tone:'stop'},
+    '2':{t:'Pin 2 · Page 4 · Grid C3',b:'Stiffener shown as 10 mm. Structural drawings call for PL 12 — please confirm against the design model.',tone:'stop'},
+    '3':{t:'Pin 3 · Page 4 · Grid D2 · answered',b:'Beam camber not noted at the splice. Answered: 12 mm camber added to the beam table on R3.',tone:'ok'}
+  };
+  var wrapSheet=document.getElementById('sheetWrap');
+  if(wrapSheet){
+    var call=wrapSheet.querySelector('.pincall');
+    wrapSheet.addEventListener('click',function(e){
+      var p=e.target.closest('.pin');if(!p)return;
+      var pins=wrapSheet.querySelectorAll('.pin');
+      for(var k=0;k<pins.length;k++){pins[k].classList.remove('sel');}
+      p.classList.add('sel');
+      var d=pinData[p.getAttribute('data-pin')];
+      var L=parseFloat(p.style.left),T=parseFloat(p.style.top);
+      var left=L>55?(L-40):(L+5);
+      call.style.left=left+'%';call.style.top=(T+4)+'%';
+      call.style.borderLeftColor=d.tone==='ok'?'var(--ok)':'var(--stop)';
+      call.style.borderColor=d.tone==='ok'?'var(--ok-line)':'var(--stop-line)';
+      call.style.borderLeftColor=d.tone==='ok'?'var(--ok)':'var(--stop)';
+      call.innerHTML='';
+      var b=document.createElement('b');b.textContent=d.t;b.style.color=d.tone==='ok'?'var(--ok)':'var(--stop)';
+      call.appendChild(b);call.appendChild(document.createTextNode(d.b));
+    });
+  }
+
+  /* pin tool toggle */
+  var pt=document.getElementById('pinTool');
+  if(pt){pt.addEventListener('click',function(){
+    var on=pt.classList.toggle('on');
+    pt.setAttribute('aria-pressed',on?'true':'false');
+    var pins=document.querySelectorAll('#sheetWrap .pin, #sheetWrap .pincall');
+    for(var k=0;k<pins.length;k++){pins[k].style.display=on?'':'none';}
+  });}
+})();
+</script>
+</body>
+</html>
