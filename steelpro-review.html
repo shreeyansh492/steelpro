@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SteelPro — Drawing Review, Annotation &amp; Revision Comparison</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B2545; --ink-2:#123A63; --ink-3:#1B4B7A;
+  --steel:#2D6CA8; --steel-soft:#E9F1F9; --steel-line:#BBD3E9;
+  --sheet:#FFFFFF; --paper:#F3F5F8; --rule:#D8DFE7; --rule-2:#EBEFF4;
+  --text:#17222E; --muted:#5C6B7C; --muted-2:#8595A6;
+  --ok:#16794A; --ok-bg:#E3F2EA; --ok-line:#B7DFC8;
+  --warn:#B26A05; --warn-bg:#FBF0DB; --warn-line:#EFD49B;
+  --stop:#B3312A; --stop-bg:#FAE9E7; --stop-line:#EFC3BE;
+  --canvas:#2A3742; --canvas-2:#202B34; --canvas-3:#3A4A57;
+  --shadow:0 1px 2px rgba(11,37,69,.06), 0 8px 24px -12px rgba(11,37,69,.18);
+  --shadow-sm:0 1px 2px rgba(11,37,69,.08);
+  --page-bg:#EEF1F5; --page-fg:#17222E; --page-muted:#5C6B7C;
+  --page-card:#FFFFFF; --page-rule:#D8DFE7; --page-ink:#0B2545;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --page-bg:#0C141D; --page-fg:#E6ECF3; --page-muted:#93A3B4;
+    --page-card:#131E29; --page-rule:#24333F; --page-ink:#E6ECF3;
+  }
+}
+:root[data-theme="dark"]{
+  --page-bg:#0C141D; --page-fg:#E6ECF3; --page-muted:#93A3B4;
+  --page-card:#131E29; --page-rule:#24333F; --page-ink:#E6ECF3;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:calc(64px + env(safe-area-inset-top,0px));-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page-bg);color:var(--page-fg);
+  font-family:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{font-family:"IBM Plex Sans Condensed","IBM Plex Sans",sans-serif;font-weight:700;letter-spacing:-.005em;margin:0}
+p{margin:0}
+code,.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+:focus-visible{outline:2px solid var(--steel);outline-offset:2px;border-radius:3px}
+@media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.wrap{max-width:1320px;margin:0 auto;padding:0 20px}
+.sheetnav{position:sticky;top:0;z-index:60;background:#0B2545;color:#fff;padding-top:env(safe-area-inset-top,0px);border-bottom:1px solid rgba(255,255,255,.14)}
+.sheetnav .wrap{display:flex;align-items:center;gap:18px;height:56px}
+.brandmark{display:flex;align-items:center;gap:9px;font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:17px;white-space:nowrap}
+.brandmark .glyph{width:24px;height:24px;flex:none}
+.sheetnav nav{display:flex;gap:2px;margin-left:auto;overflow-x:auto;scrollbar-width:none}
+.sheetnav nav::-webkit-scrollbar{display:none}
+.sheetnav nav a{color:rgba(255,255,255,.72);text-decoration:none;font-size:13px;font-weight:500;padding:7px 11px;border-radius:5px;white-space:nowrap}
+.sheetnav nav a:hover{background:rgba(255,255,255,.1);color:#fff}
+.themetog{margin-left:6px;flex:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;width:32px;height:32px;border-radius:6px;cursor:pointer;display:grid;place-items:center}
+
+/* masthead */
+.masthead{padding:40px 0 0}
+.tb{background:var(--sheet);border:1.5px solid var(--ink);border-radius:2px;overflow:hidden;box-shadow:var(--shadow);color:var(--text)}
+.tb-top{padding:24px 26px 22px;border-bottom:1.5px solid var(--ink);position:relative;overflow:hidden}
+.tb-top::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+  background-image:linear-gradient(var(--steel-line) 1px,transparent 1px),linear-gradient(90deg,var(--steel-line) 1px,transparent 1px);
+  background-size:26px 26px;-webkit-mask-image:linear-gradient(105deg,transparent 54%,#000 96%);mask-image:linear-gradient(105deg,transparent 54%,#000 96%)}
+.tb-top>*{position:relative}
+.tb-kicker{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel);letter-spacing:.07em;margin-bottom:11px}
+.tb h1{font-size:clamp(30px,4.8vw,48px);line-height:1.04;color:var(--ink);max-width:19ch}
+.tb-sub{margin-top:13px;font-size:15.5px;color:var(--muted);max-width:66ch}
+.tb-grid{display:grid;grid-template-columns:repeat(5,1fr);background:var(--rule)}
+.tb-cell{background:var(--sheet);padding:11px 14px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.tb-cell dt{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.09em;color:var(--muted-2);text-transform:uppercase}
+.tb-cell dd{margin:0;font-size:13.5px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:820px){.tb-grid{grid-template-columns:repeat(2,1fr)}}
+
+section{padding:54px 0 0}
+.sec-head{display:flex;align-items:flex-end;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+.sec-head h2{font-size:clamp(22px,3vw,30px);color:var(--page-ink);line-height:1.1}
+.sec-head .idx{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--steel);border:1px solid var(--steel-line);background:var(--steel-soft);padding:3px 8px;border-radius:3px;flex:none}
+.sec-head p{color:var(--page-muted);font-size:14.5px;max-width:70ch;flex:1 1 320px}
+.card{background:var(--page-card);border:1px solid var(--page-rule);border-radius:10px;box-shadow:var(--shadow-sm)}
+
+/* app frame */
+.frame{background:var(--sheet);border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);color:var(--text)}
+.chrome{display:flex;align-items:center;gap:8px;padding:9px 13px;background:#E7EBF0;border-bottom:1px solid var(--rule)}
+.dot{width:10px;height:10px;border-radius:50%;background:#C6CFD9}
+.urlbar{flex:1;background:var(--sheet);border:1px solid var(--rule);border-radius:5px;padding:4px 10px;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);display:flex;align-items:center;gap:7px;min-width:0}
+.urlbar span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.appbar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--rule);background:var(--sheet);flex-wrap:wrap}
+.appbar h3{font-size:16px;color:var(--ink)}
+.appbar .crumb{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted-2)}
+.appbar .right{margin-left:auto;display:flex;align-items:center;gap:8px}
+
+.split{display:grid;grid-template-columns:1fr 344px;height:760px}
+.split.pm{grid-template-columns:1fr 380px}
+
+/* viewer */
+.vmain{display:flex;flex-direction:column;background:var(--canvas);min-width:0}
+.vtool{display:flex;align-items:center;gap:8px;padding:7px 11px;background:var(--canvas-2);border-bottom:1px solid #16202A;color:#C9D4DE;font-size:12px;flex-wrap:wrap}
+.grp{display:flex;align-items:center;gap:2px;background:var(--canvas);border-radius:6px;padding:2px}
+.grp button,.vtool .tb2{font:inherit;background:none;border:0;color:#C9D4DE;min-width:26px;height:24px;padding:0 5px;border-radius:4px;cursor:pointer;display:grid;place-items:center}
+.grp button:hover{background:var(--canvas-3);color:#fff}
+.grp button.on{background:var(--steel);color:#fff}
+.grp button[disabled]{opacity:.35;cursor:not-allowed}
+.pg{font-family:"IBM Plex Mono",monospace;font-size:11.5px;padding:0 6px;white-space:nowrap}
+.pgin{width:34px;background:var(--canvas-3);border:0;color:#fff;font-family:"IBM Plex Mono",monospace;font-size:11.5px;text-align:center;border-radius:4px;padding:3px 2px}
+.docname{font-weight:600;color:#fff;font-size:12.5px;margin-right:auto;display:flex;align-items:center;gap:8px;min-width:0}
+.docname .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vstage{flex:1;overflow:auto;padding:18px;display:flex;justify-content:center;align-items:flex-start}
+.vstage.fs{position:fixed;inset:0;z-index:200;background:var(--canvas);padding:20px}
+.pagewrap{position:relative;background:#fff;box-shadow:0 10px 34px rgba(0,0,0,.45);flex:none;touch-action:none}
+.pagewrap>svg{display:block;width:100%;height:auto}
+.alayer{position:absolute;inset:0;width:100%;height:100%;cursor:crosshair}
+.alayer.selectmode{cursor:default}
+.alayer .hit{cursor:pointer}
+.alayer .sel-outline{stroke:#2D6CA8;stroke-width:2;stroke-dasharray:6 4;fill:none;pointer-events:none}
+@keyframes flash{0%,100%{opacity:0}35%{opacity:1}}
+.flashbox{animation:flash 1.5s ease-in-out 2}
+.searchbar{display:flex;align-items:center;gap:7px;background:var(--canvas-3);border-radius:6px;padding:3px 9px;color:#C9D4DE}
+.searchbar input{background:none;border:0;color:#fff;font:inherit;font-size:12px;width:120px;outline:none}
+.hits{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:#93A3B4}
+
+/* side panel */
+.vside{border-left:1px solid var(--rule);display:flex;flex-direction:column;background:var(--sheet);overflow-y:auto;min-width:0}
+.vsec{border-bottom:1px solid var(--rule)}
+.vsec-h{display:flex;align-items:center;gap:9px;padding:11px 15px;background:var(--paper);border-bottom:1px solid var(--rule-2)}
+.vsec-h h4{font-size:13.5px;color:var(--ink)}
+.vsec-h .cnt{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
+.vsec-b{padding:13px 15px}
+
+.docinfo{display:grid;grid-template-columns:auto 1fr;gap:0;font-size:12.5px}
+.docinfo dt{font-family:"IBM Plex Mono",monospace;font-size:10.5px;color:var(--muted-2);padding:5px 12px 5px 0;white-space:nowrap}
+.docinfo dd{margin:0;padding:5px 0;text-align:right;color:var(--text);font-weight:500}
+
+/* tool palette */
+.tools{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;padding:12px 15px}
+.tool{position:relative;aspect-ratio:1;border:1px solid var(--rule);background:var(--sheet);border-radius:7px;display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.tool:hover{border-color:var(--steel-line);color:var(--steel);background:#FAFCFE}
+.tool.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.tool[disabled]{opacity:.35;cursor:not-allowed}
+.tool svg{width:16px;height:16px}
+.toolrow{display:flex;gap:7px;padding:0 15px 12px;align-items:center;flex-wrap:wrap}
+.swatches{display:flex;gap:5px}
+.sw{width:19px;height:19px;border-radius:50%;border:2px solid transparent;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.sw.on{border-color:var(--ink)}
+.hintline{font-size:11.5px;color:var(--muted);padding:0 15px 12px;line-height:1.45}
+
+/* annotation list */
+.alist{list-style:none;margin:0;padding:0}
+.aitem{display:flex;gap:10px;padding:10px 15px;border-bottom:1px solid var(--rule-2);cursor:pointer}
+.aitem:hover{background:#FAFCFE}
+.aitem.on{background:var(--steel-soft);box-shadow:inset 3px 0 0 var(--steel)}
+.aitem .num{width:21px;height:21px;border-radius:50%;color:#fff;font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:700;display:grid;place-items:center;flex:none;background:var(--stop)}
+.aitem .num.ok{background:var(--ok)}
+.aitem .ab{min-width:0;flex:1}
+.aitem .am{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.aitem .am b{font-size:12px;color:var(--ink)}
+.loc{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--steel);background:var(--steel-soft);border-radius:3px;padding:0 5px;white-space:nowrap}
+.aitem p{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+.aitem time{font-size:10.5px;color:var(--muted-2);font-family:"IBM Plex Mono",monospace}
+.reply{margin-top:7px;background:var(--ok-bg);border:1px solid var(--ok-line);border-left:3px solid var(--ok);border-radius:6px;padding:7px 9px;font-size:12px;color:#2F6B52;line-height:1.45}
+.reply b{display:block;font-size:10.5px;font-family:"IBM Plex Mono",monospace;color:var(--ok);margin-bottom:2px}
+.inote{margin-top:7px;background:var(--paper);border:1px dashed var(--rule);border-radius:6px;padding:7px 9px;font-size:12px;color:var(--muted);line-height:1.45}
+.inote b{display:block;font-size:10.5px;font-family:"IBM Plex Mono",monospace;color:var(--muted-2);margin-bottom:2px}
+
+/* record */
+.rec{background:var(--canvas-2);border-radius:8px;padding:11px 13px;font-family:"IBM Plex Mono",monospace;font-size:11px;line-height:1.75;color:#C9D4DE;overflow-x:auto;white-space:pre}
+.rec .k{color:#8FB6DC}.rec .s{color:#9BD4B0}.rec .n{color:#E0B166}
+
+/* review decision */
+.radios{display:flex;flex-direction:column;gap:7px;padding:13px 15px 0}
+.radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--rule);border-radius:7px;padding:9px 11px;cursor:pointer;background:var(--sheet)}
+.radio input{margin:2px 0 0;accent-color:var(--steel);flex:none}
+.radio .rt{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;display:block}
+.radio .rd{font-size:11.5px;color:var(--muted-2);line-height:1.35;margin-top:2px;display:block}
+.radio.sel-ok{border-color:var(--ok-line);background:var(--ok-bg)}.radio.sel-ok .rt{color:var(--ok)}
+.radio.sel-warn{border-color:var(--warn-line);background:var(--warn-bg)}.radio.sel-warn .rt{color:var(--warn)}
+.radio.sel-stop{border-color:var(--stop-line);background:var(--stop-bg)}.radio.sel-stop .rt{color:var(--stop)}
+.ta{width:100%;min-height:74px;border:1px solid var(--rule);border-radius:7px;padding:9px 11px;font:inherit;font-size:12.5px;color:var(--text);resize:vertical;background:var(--sheet)}
+.ta:focus{outline:2px solid var(--steel);outline-offset:-1px;border-color:var(--steel)}
+.blocker{display:flex;gap:8px;align-items:flex-start;background:var(--stop-bg);border:1px solid var(--stop-line);border-radius:7px;padding:9px 11px;font-size:12px;color:#7A2822;line-height:1.45;margin-top:10px}
+.blocker svg{width:14px;height:14px;color:var(--stop);margin-top:2px}
+.okbox{display:flex;gap:8px;align-items:flex-start;background:var(--ok-bg);border:1px solid var(--ok-line);border-radius:7px;padding:9px 11px;font-size:12px;color:#2F6B52;line-height:1.45;margin-top:10px}
+.okbox svg{width:14px;height:14px;color:var(--ok);margin-top:2px}
+
+/* generic bits */
+.btn{font:inherit;font-size:13px;font-weight:600;border-radius:6px;padding:7px 13px;border:1px solid var(--ink);background:var(--ink);color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.btn:hover{background:var(--ink-2);border-color:var(--ink-2)}
+.btn.ghost{background:var(--sheet);color:var(--ink);border-color:var(--rule)}
+.btn.ghost:hover{border-color:var(--steel);color:var(--steel);background:var(--sheet)}
+.btn.sm{font-size:12px;padding:5px 10px}
+.btn.wide{width:100%;justify-content:center}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn svg{width:14px;height:14px}
+.iconbtn{width:32px;height:32px;border-radius:6px;border:1px solid var(--rule);background:var(--sheet);display:grid;place-items:center;cursor:pointer;color:var(--muted)}
+.iconbtn:hover{border-color:var(--steel);color:var(--steel)}
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:2.5px 8px;border-radius:4px;border:1px solid;white-space:nowrap;line-height:1.5}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.b-ok{color:var(--ok);background:var(--ok-bg);border-color:var(--ok-line)}
+.b-warn{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
+.b-stop{color:var(--stop);background:var(--stop-bg);border-color:var(--stop-line)}
+.b-info{color:var(--ink-3);background:var(--steel-soft);border-color:var(--steel-line)}
+.b-grey{color:var(--muted);background:var(--paper);border-color:var(--rule)}
+.rev{font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;color:var(--ink-3);background:var(--steel-soft);border:1px solid var(--steel-line);border-radius:3px;padding:1px 6px;white-space:nowrap}
+.note{background:var(--page-card);border:1px solid var(--page-rule);border-left:3px solid var(--steel);border-radius:8px;padding:13px 15px}
+.note.green{border-left-color:var(--ok)}.note.red{border-left-color:var(--stop)}
+.note h4{font-size:14.5px;color:var(--page-ink);margin-bottom:4px}
+.note p{font-size:13px;color:var(--page-muted);line-height:1.5}
+.notes3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-top:14px}
+.seg{display:inline-flex;background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:3px;gap:2px}
+.seg button{font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);background:none;border:0;padding:6px 12px;border-radius:6px;cursor:pointer;display:flex;align-items:center;gap:6px}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff}
+
+/* revision history */
+.revtree{display:flex;flex-direction:column;gap:0}
+.revrow{display:grid;grid-template-columns:76px 1fr;gap:0;border-bottom:1px solid var(--rule-2)}
+.revrow:last-child{border-bottom:0}
+.revmark{display:flex;flex-direction:column;align-items:center;padding-top:14px;position:relative}
+.revmark .tag{font-family:"IBM Plex Mono",monospace;font-size:12px;font-weight:600;border:1px solid var(--rule);border-radius:5px;padding:3px 9px;background:var(--sheet);color:var(--muted);z-index:1}
+.revmark .ln{flex:1;width:2px;background:var(--rule);margin-top:6px}
+.revrow:last-child .revmark .ln{display:none}
+.revrow.current .revmark .tag{background:var(--ink);border-color:var(--ink);color:#fff}
+.revbody{padding:14px 0 16px 6px;min-width:0}
+.revtop{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.revtop b{font-size:14px;color:var(--page-ink)}
+.revmeta{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--page-muted);margin-top:4px}
+.revfacts{display:flex;gap:16px;flex-wrap:wrap;margin-top:9px}
+.fact{font-size:12.5px;color:var(--page-muted)}
+.fact b{color:var(--page-ink);font-weight:600}
+.revacts{display:flex;gap:7px;margin-top:11px;flex-wrap:wrap}
+
+/* comparison */
+.cmpbar{display:flex;align-items:center;gap:10px;padding:9px 14px;background:var(--canvas-2);color:#C9D4DE;flex-wrap:wrap;border-bottom:1px solid #16202A}
+.vs{font-family:"IBM Plex Mono",monospace;font-size:11px;color:#8FB6DC;padding:0 2px}
+.revpick{background:var(--canvas-3);border:1px solid #46586a;color:#fff;font-family:"IBM Plex Mono",monospace;font-size:12px;border-radius:5px;padding:4px 7px}
+.cmpstage{display:grid;grid-template-columns:1fr 1fr;gap:12px;flex:1;overflow:auto;padding:16px;background:var(--canvas);align-items:start;justify-items:center}
+.cmpstage.single{grid-template-columns:1fr}
+.cmpcol{width:100%;display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.cmphead{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#C9D4DE;font-family:"IBM Plex Mono",monospace;width:100%;justify-content:center}
+.cmphead .dotc{width:8px;height:8px;border-radius:50%;background:var(--warn)}
+.cmphead .dotc.n{background:var(--steel)}
+.overlaywrap{position:relative;background:#fff;box-shadow:0 10px 34px rgba(0,0,0,.45);width:min(100%,780px)}
+.overlaywrap>svg{display:block;width:100%;height:auto}
+.overlaywrap>svg.top{position:absolute;inset:0}
+.opacityrow{display:flex;align-items:center;gap:11px;color:#C9D4DE;font-size:11.5px;width:min(100%,780px);font-family:"IBM Plex Mono",monospace}
+.opacityrow input[type=range]{flex:1;accent-color:var(--steel)}
+.difflegend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:11.5px;color:#C9D4DE}
+.difflegend span{display:flex;align-items:center;gap:6px}
+.difflegend i{width:11px;height:11px;border-radius:3px;display:block}
+.chg{list-style:none;margin:0;padding:0}
+.chgitem{display:flex;gap:10px;padding:10px 15px;border-bottom:1px solid var(--rule-2);cursor:pointer}
+.chgitem:hover{background:#FAFCFE}
+.chgitem.on{background:var(--steel-soft);box-shadow:inset 3px 0 0 var(--steel)}
+.chgitem .tagc{font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:600;border-radius:3px;padding:2px 6px;height:fit-content;flex:none;border:1px solid}
+.tagc.add{color:var(--ok);background:var(--ok-bg);border-color:var(--ok-line)}
+.tagc.del{color:var(--stop);background:var(--stop-bg);border-color:var(--stop-line)}
+.tagc.mod{color:var(--warn);background:var(--warn-bg);border-color:var(--warn-line)}
+.chgitem .cb{min-width:0}
+.chgitem .cb b{font-size:12.5px;color:var(--ink);display:block}
+.chgitem .cb p{font-size:12px;color:var(--muted);line-height:1.45;margin-top:2px}
+.chgitem .cb .src{font-family:"IBM Plex Mono",monospace;font-size:10px;color:var(--muted-2);margin-top:4px;display:block}
+
+/* tables + misc */
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted-2);font-weight:500;padding:9px 14px;border-bottom:1px solid var(--rule);background:var(--paper);white-space:nowrap}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--rule-2);vertical-align:middle;color:var(--text)}
+tbody tr:last-child td{border-bottom:0}
+.tbl-scroll{overflow-x:auto}
+.tbl-scroll table{min-width:560px}
+.kv{display:grid;grid-template-columns:auto 1fr;font-size:13px;border-top:1px solid var(--page-rule)}
+.kv dt{font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-3);padding:7px 14px 7px 0;border-bottom:1px solid var(--page-rule);white-space:nowrap}
+.kv dd{margin:0;padding:7px 0;border-bottom:1px solid var(--page-rule);color:var(--page-muted);font-size:12.5px;text-align:right}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.settingrow{display:flex;gap:14px;align-items:center;padding:12px 15px;border-bottom:1px solid var(--rule-2)}
+.settingrow:last-child{border-bottom:0}
+.sr-t{font-size:13.5px;font-weight:600;color:var(--page-ink)}
+.sr-d{font-size:12px;color:var(--page-muted);line-height:1.4}
+.seclist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1px;background:var(--page-rule);border:1px solid var(--page-rule);border-radius:9px;overflow:hidden}
+.seclist li{background:var(--page-card);padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.seclist li svg{width:15px;height:15px;color:var(--ok);flex:none;margin-top:2px}
+.seclist b{font-size:13px;font-weight:600;color:var(--page-ink);display:block}
+.seclist span{font-size:11.5px;color:var(--page-muted);line-height:1.45}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+.flow b{background:var(--page-card);border:1px solid var(--page-rule);border-radius:5px;padding:5px 9px;color:var(--page-ink);font-weight:600}
+.flow i{color:var(--muted-2);font-style:normal}
+footer{margin-top:56px;border-top:1px solid var(--page-rule);padding:24px 0 44px;color:var(--page-muted);font-size:12.5px}
+footer .wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+
+@media (max-width:1180px){
+  .split,.split.pm{grid-template-columns:1fr 320px}
+}
+@media (max-width:980px){
+  .split,.split.pm{grid-template-columns:1fr;grid-template-rows:420px 1fr;height:auto}
+  .vside{border-left:0;border-top:1px solid var(--rule);max-height:620px}
+  .cmpstage{grid-template-columns:1fr}
+  .grid2{grid-template-columns:1fr}
+}
+@media (max-width:620px){
+  .wrap{padding:0 14px}
+  .tools{grid-template-columns:repeat(6,1fr)}
+  .vstage{padding:10px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-select" viewBox="0 0 24 24"><path d="M5 3l6.5 17 2.4-6.6L20.5 11z"/></symbol>
+<symbol id="i-highlight" viewBox="0 0 24 24"><path d="M14 4.5 19.5 10 11 18.5H5.5V13z"/><path d="M4 21.5h16"/></symbol>
+<symbol id="i-pen" viewBox="0 0 24 24"><path d="M3 20c3-1 3.5-5 6-7.5S14 7 16.5 5.5 20.5 4 21 4.5s-.5 2-2 4-4.5 3-7 5.5-6.5 3-9 6z"/></symbol>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 19 19 5"/><path d="M11 5h8v8"/></symbol>
+<symbol id="i-line" viewBox="0 0 24 24"><path d="M4 20 20 4"/></symbol>
+<symbol id="i-rect" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="1.5"/></symbol>
+<symbol id="i-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></symbol>
+<symbol id="i-text" viewBox="0 0 24 24"><path d="M5 6.5V5h14v1.5M12 5v14M9 19h6"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s6.5-6 6.5-10.5a6.5 6.5 0 0 0-13 0C5.5 15 12 21 12 21z"/><circle cx="12" cy="10.5" r="2.2"/></symbol>
+<symbol id="i-undo" viewBox="0 0 24 24"><path d="M4 9h11a5 5 0 0 1 0 10h-6"/><path d="M8 5 4 9l4 4"/></symbol>
+<symbol id="i-redo" viewBox="0 0 24 24"><path d="M20 9H9a5 5 0 0 0 0 10h6"/><path d="m16 5 4 4-4 4"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 7V4.5h4V7M6.5 7l1 13h9l1-13"/></symbol>
+<symbol id="i-zin" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M11 8.5v5M8.5 11h5M20 20l-4.2-4.2"/></symbol>
+<symbol id="i-zout" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M8.5 11h5M20 20l-4.2-4.2"/></symbol>
+<symbol id="i-fit" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="1.5"/><path d="M8 9h8v6H8z"/></symbol>
+<symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 4H4v5M15 4h5v5M15 20h5v-5M9 20H4v-5"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.2-4.2"/></symbol>
+<symbol id="i-chevL" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+<symbol id="i-chevR" viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7"/></symbol>
+<symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 4 2.5 20h19z"/><path d="M12 10v4.5M12 17.5v.01"/></symbol>
+<symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v13M6.5 12.5 12 18l5.5-5.5"/><path d="M4 21h16"/></symbol>
+<symbol id="i-up" viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/><path d="M4 20h16"/></symbol>
+<symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10" width="15" height="10.5" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+<symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v6c0 4.5 3.2 8 7.5 9.5 4.3-1.5 7.5-5 7.5-9.5V6z"/><path d="m8.8 12 2.2 2.2 4.2-4.4"/></symbol>
+<symbol id="i-reply" viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a6 6 0 0 1 6 6v2"/></symbol>
+<symbol id="i-note" viewBox="0 0 24 24"><path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h6"/></symbol>
+<symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5z"/><path d="m3 13 9 5 9-5"/></symbol>
+<symbol id="i-compare" viewBox="0 0 24 24"><rect x="3" y="5" width="7.5" height="14" rx="1.5"/><rect x="13.5" y="5" width="7.5" height="14" rx="1.5"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5.2l3.2 2"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+</defs></svg>
+
+<header class="sheetnav">
+  <div class="wrap">
+    <span class="brandmark">
+      <svg class="glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M2.5 4.5h19M2.5 19.5h19M9.6 4.5v15M14.4 4.5v15"/></svg>
+      SteelPro Review
+    </span>
+    <nav>
+      <a href="#client">Client review</a>
+      <a href="#pm">PM response</a>
+      <a href="#history">Revision history</a>
+      <a href="#compare">Compare revisions</a>
+      <a href="#data">Data &amp; security</a>
+    </nav>
+    <button class="themetog" id="themeBtn" aria-label="Switch colour theme"><svg class="i" style="font-size:16px"><use href="#i-sun"/></svg></button>
+  </div>
+</header>
+
+<div class="wrap masthead">
+  <div class="tb">
+    <div class="tb-top">
+      <div class="tb-kicker">Feature design · Drawing review, annotation &amp; revision comparison</div>
+      <h1>Mark up the drawing. Never touch the file.</h1>
+      <p class="tb-sub">Clients annotate a rendered page, not the PDF. Every mark, comment and decision is stored against one revision and stays there — so R3 still reads exactly as R3 after R4 lands.</p>
+    </div>
+    <dl class="tb-grid">
+      <div class="tb-cell"><dt>Document</dt><dd>Column Drawing</dd></div>
+      <div class="tb-cell"><dt>Current revision</dt><dd>R4 · under review</dd></div>
+      <div class="tb-cell"><dt>Annotation store</dt><dd>PostgreSQL</dd></div>
+      <div class="tb-cell"><dt>File store</dt><dd>Windows Server (VPN)</dd></div>
+      <div class="tb-cell"><dt>Original PDF</dt><dd>Never modified</dd></div>
+    </dl>
+  </div>
+</div>
+
+<!-- ================= CLIENT REVIEW ================= -->
+<section id="client" class="wrap">
+  <div class="sec-head">
+    <span class="idx">A</span>
+    <h2>Client review workspace</h2>
+    <p>Pick a tool, drag on the drawing, write the remark. Everything you draw is real — it goes into the annotation list, gets a record, and can be undone or deleted.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="urlbar"><svg class="i" style="font-size:12px;color:var(--ok)"><use href="#i-lock"/></svg><span>portal.vertexsteel.com/projects/PRJ-2026-014/documents/DOC-0041/revisions/R3/review</span></span>
+    </div>
+    <div class="appbar">
+      <button class="iconbtn" aria-label="Back to documents"><svg class="i" style="font-size:15px"><use href="#i-chevL"/></svg></button>
+      <h3>Column Drawing</h3>
+      <span class="rev">R3</span>
+      <span class="badge b-warn">Under client review</span>
+      <span class="crumb">Northgate Distribution Warehouse · PRJ-2026-014</span>
+      <div class="right">
+        <button class="btn ghost sm" data-scroll="compare"><svg class="i"><use href="#i-compare"/></svg> Compare with previous</button>
+      </div>
+    </div>
+
+    <div class="split">
+      <div class="vmain">
+        <div class="vtool">
+          <span class="docname"><span class="nm">Column_R3.pdf</span><span class="hits">2.4 MB</span></span>
+          <span class="grp">
+            <button id="clPrev" aria-label="Previous page"><svg class="i" style="font-size:14px"><use href="#i-chevL"/></svg></button>
+            <input class="pgin" id="clPageIn" value="4" aria-label="Page number">
+            <span class="pg">/ 20</span>
+            <button id="clNext" aria-label="Next page"><svg class="i" style="font-size:14px"><use href="#i-chevR"/></svg></button>
+          </span>
+          <span class="grp">
+            <button id="clZOut" aria-label="Zoom out"><svg class="i" style="font-size:14px"><use href="#i-zout"/></svg></button>
+            <span class="pg" id="clZoom">100%</span>
+            <button id="clZIn" aria-label="Zoom in"><svg class="i" style="font-size:14px"><use href="#i-zin"/></svg></button>
+            <button id="clFit" aria-label="Fit to page"><svg class="i" style="font-size:14px"><use href="#i-fit"/></svg></button>
+            <button id="clFull" aria-label="Full screen"><svg class="i" style="font-size:14px"><use href="#i-expand"/></svg></button>
+          </span>
+          <span class="searchbar">
+            <svg class="i" style="font-size:13px"><use href="#i-search"/></svg>
+            <input id="clSearch" placeholder="Search text" aria-label="Search in document">
+            <span class="hits" id="clHits"></span>
+          </span>
+          <button class="grp" id="clDownload" style="border:0;cursor:not-allowed" title="Download">
+            <span style="display:flex;align-items:center;gap:6px;padding:0 7px;color:#93A3B4;font-size:11.5px"><svg class="i" style="font-size:14px"><use href="#i-down"/></svg> Download</span>
+          </button>
+        </div>
+        <div class="vstage" id="clStage">
+          <div class="pagewrap" id="clWrap" style="width:820px"></div>
+        </div>
+      </div>
+
+      <aside class="vside">
+        <div class="vsec">
+          <div class="vsec-h"><h4>Document</h4><span class="cnt">DOC-0041</span></div>
+          <div class="vsec-b">
+            <dl class="docinfo">
+              <dt>drawing</dt><dd>Column Drawing</dd>
+              <dt>revision</dt><dd><span class="rev">R3</span></dd>
+              <dt>review_status</dt><dd><span class="badge b-warn">Under client review</span></dd>
+              <dt>file</dt><dd>Column_R3.pdf</dd>
+              <dt>uploaded</dt><dd>21 September 2026</dd>
+              <dt>uploaded_by</dt><dd>S. Nair (Vertex)</dd>
+              <dt>pages</dt><dd>20</dd>
+              <dt>download</dt><dd id="clDlState">Locked — under review</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="vsec">
+          <div class="vsec-h"><h4>Annotation tools</h4><span class="cnt" id="clToolName">Rectangle</span></div>
+          <div class="tools" id="clTools">
+            <button class="tool" data-tool="select" title="Select"><svg class="i"><use href="#i-select"/></svg></button>
+            <button class="tool" data-tool="highlight" title="Highlight"><svg class="i"><use href="#i-highlight"/></svg></button>
+            <button class="tool" data-tool="freehand" title="Freehand"><svg class="i"><use href="#i-pen"/></svg></button>
+            <button class="tool" data-tool="arrow" title="Arrow"><svg class="i"><use href="#i-arrow"/></svg></button>
+            <button class="tool" data-tool="line" title="Line"><svg class="i"><use href="#i-line"/></svg></button>
+            <button class="tool on" data-tool="rect" title="Rectangle"><svg class="i"><use href="#i-rect"/></svg></button>
+            <button class="tool" data-tool="ellipse" title="Circle"><svg class="i"><use href="#i-circle"/></svg></button>
+            <button class="tool" data-tool="text" title="Text box"><svg class="i"><use href="#i-text"/></svg></button>
+            <button class="tool" data-tool="pin" title="Pin comment"><svg class="i"><use href="#i-pin"/></svg></button>
+            <button class="tool" id="clUndo" title="Undo"><svg class="i"><use href="#i-undo"/></svg></button>
+            <button class="tool" id="clRedo" title="Redo"><svg class="i"><use href="#i-redo"/></svg></button>
+            <button class="tool" id="clDel" title="Delete selected"><svg class="i"><use href="#i-trash"/></svg></button>
+          </div>
+          <div class="toolrow">
+            <span class="swatches" id="clColors">
+              <button class="sw on" data-color="#C0392B" style="background:#C0392B" aria-label="Red"></button>
+              <button class="sw" data-color="#2D6CA8" style="background:#2D6CA8" aria-label="Blue"></button>
+              <button class="sw" data-color="#16794A" style="background:#16794A" aria-label="Green"></button>
+              <button class="sw" data-color="#B26A05" style="background:#B26A05" aria-label="Orange"></button>
+              <button class="sw" data-color="#17222E" style="background:#17222E" aria-label="Black"></button>
+            </span>
+            <span style="font-size:11.5px;color:var(--muted);margin-left:auto" id="clCount">3 annotations on R3</span>
+          </div>
+          <p class="hintline">Drag on the drawing to place a mark, then write the remark underneath. Marks are saved to the revision, never burned into the PDF.</p>
+        </div>
+
+        <div class="vsec" id="clSelSec" hidden>
+          <div class="vsec-h"><h4>Selected annotation</h4><span class="cnt" id="clSelId">—</span></div>
+          <div class="vsec-b">
+            <label style="font-size:11.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Remark</label>
+            <textarea class="ta" id="clSelText" placeholder="Describe what needs to change…"></textarea>
+            <div style="display:flex;gap:7px;margin-top:9px">
+              <button class="btn sm" id="clSaveText">Save remark</button>
+              <button class="btn ghost sm" id="clDelSel"><svg class="i"><use href="#i-trash"/></svg> Delete</button>
+            </div>
+            <div style="margin-top:12px">
+              <div style="font-size:11.5px;font-weight:600;color:var(--muted);margin-bottom:6px">Stored record</div>
+              <div class="rec" id="clRecord"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="vsec">
+          <div class="vsec-h"><h4>Annotations &amp; comments</h4><span class="cnt" id="clListCount">3</span></div>
+          <ul class="alist" id="clList"></ul>
+        </div>
+
+        <div class="vsec">
+          <div class="vsec-h"><h4>Review decision</h4><span class="cnt">R3</span></div>
+          <div class="radios" id="clRadios">
+            <label class="radio" data-tone="ok" data-val="approved">
+              <input type="radio" name="decision"><span><span class="rt">Approved</span><span class="rd">Released as drawn. No changes needed.</span></span>
+            </label>
+            <label class="radio" data-tone="warn" data-val="approved_with_comments">
+              <input type="radio" name="decision"><span><span class="rt">Approved with comments</span><span class="rd">Proceed, and carry the annotations into the next revision.</span></span>
+            </label>
+            <label class="radio sel-stop" data-tone="stop" data-val="revision_required">
+              <input type="radio" name="decision" checked><span><span class="rt">Revision required</span><span class="rd">Do not fabricate. Needs at least one comment or annotation.</span></span>
+            </label>
+          </div>
+          <div class="vsec-b">
+            <label style="font-size:11.5px;font-weight:600;color:var(--muted);display:block;margin-bottom:5px">Overall comments</label>
+            <textarea class="ta" id="clOverall" placeholder="Enter your comments…">Connection at Grid B5 must be revised before fabrication. See marked-up pages 4, 7 and 9.</textarea>
+            <div id="clGate"></div>
+            <button class="btn wide" id="clSubmit" style="margin-top:11px">Submit review</button>
+            <p style="font-size:11.5px;color:var(--muted-2);margin-top:9px;line-height:1.45">Stored against revision R3 only. Uploading R4 later leaves this record untouched.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <div class="notes3">
+    <div class="note"><h4>Coordinates, not pixels burned in</h4><p>Each mark stores its page, type, x/y, width/height and any path points in page units, plus colour and stroke. The renderer draws it back over the page at any zoom.</p></div>
+    <div class="note red"><h4>The gate on "revision required"</h4><p>Delete every annotation and clear the comment box: the submit button locks and says why. A rejection with no reason helps nobody in the drawing office.</p></div>
+    <div class="note green"><h4>Download follows policy</h4><p>R3 is under review, so download is off under the default policy. The PM settings panel below switches it live.</p></div>
+  </div>
+</section>
+
+<!-- ================= PM REVIEW ================= -->
+<section id="pm" class="wrap">
+  <div class="sec-head">
+    <span class="idx">B</span>
+    <h2>What the PM sees</h2>
+    <p>The same revision, read-only. Clicking an annotation jumps the viewer to its page and flashes the mark, so there's no hunting for what the client meant.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="urlbar"><svg class="i" style="font-size:12px;color:var(--ok)"><use href="#i-lock"/></svg><span>portal.vertexsteel.com/pm/documents/DOC-0041/revisions/R3/annotations</span></span>
+    </div>
+    <div class="appbar">
+      <h3>Column Drawing</h3>
+      <span class="rev">R3</span>
+      <span class="badge b-stop">Revision required</span>
+      <span class="crumb">reviewed by J. Harland · 21 Sep 2026, 14:22</span>
+      <div class="right">
+        <button class="btn ghost sm"><svg class="i"><use href="#i-note"/></svg> Internal note</button>
+        <button class="btn sm" id="pmUpload"><svg class="i"><use href="#i-up"/></svg> Upload R4</button>
+      </div>
+    </div>
+
+    <div class="split pm">
+      <div class="vmain">
+        <div class="vtool">
+          <span class="docname"><span class="nm">Column_R3.pdf</span><span class="hits">read-only · client annotations shown</span></span>
+          <span class="grp">
+            <button id="pmPrev" aria-label="Previous page"><svg class="i" style="font-size:14px"><use href="#i-chevL"/></svg></button>
+            <input class="pgin" id="pmPageIn" value="4" aria-label="Page number">
+            <span class="pg">/ 20</span>
+            <button id="pmNext" aria-label="Next page"><svg class="i" style="font-size:14px"><use href="#i-chevR"/></svg></button>
+          </span>
+          <span class="grp">
+            <button id="pmZOut" aria-label="Zoom out"><svg class="i" style="font-size:14px"><use href="#i-zout"/></svg></button>
+            <span class="pg" id="pmZoom">100%</span>
+            <button id="pmZIn" aria-label="Zoom in"><svg class="i" style="font-size:14px"><use href="#i-zin"/></svg></button>
+            <button id="pmFit" aria-label="Fit to page"><svg class="i" style="font-size:14px"><use href="#i-fit"/></svg></button>
+            <button id="pmFull" aria-label="Full screen"><svg class="i" style="font-size:14px"><use href="#i-expand"/></svg></button>
+          </span>
+        </div>
+        <div class="vstage" id="pmStage">
+          <div class="pagewrap" id="pmWrap" style="width:820px"></div>
+        </div>
+      </div>
+
+      <aside class="vside">
+        <div class="vsec">
+          <div class="vsec-h"><h4>Review</h4><span class="cnt">REV-R3</span></div>
+          <div class="vsec-b">
+            <dl class="docinfo">
+              <dt>decision</dt><dd><span class="badge b-stop">Revision required</span></dd>
+              <dt>reviewer</dt><dd>J. Harland · Harland Construction</dd>
+              <dt>submitted</dt><dd>21 Sep 2026, 14:22</dd>
+              <dt>annotations</dt><dd id="pmAnnCount">3 (2 open)</dd>
+            </dl>
+            <p style="font-size:12.5px;color:var(--muted);line-height:1.5;margin-top:11px;padding-top:11px;border-top:1px solid var(--rule-2)">“Connection at Grid B5 must be revised before fabrication. See marked-up pages 4, 7 and 9.”</p>
+          </div>
+        </div>
+        <div class="vsec">
+          <div class="vsec-h"><h4>Client annotations</h4><span class="cnt">page · grid</span></div>
+          <ul class="alist" id="pmList"></ul>
+        </div>
+        <div class="vsec">
+          <div class="vsec-h"><h4>Next step</h4></div>
+          <div class="vsec-b">
+            <p style="font-size:12.5px;color:var(--muted);line-height:1.5">Uploading R4 creates a new revision row and a fresh review cycle. R3 keeps its file, its decision, its annotations and your replies exactly as they are.</p>
+            <button class="btn wide" style="margin-top:11px" data-scroll="compare"><svg class="i"><use href="#i-compare"/></svg> Compare R3 with R4</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+<!-- ================= REVISION HISTORY ================= -->
+<section id="history" class="wrap">
+  <div class="sec-head">
+    <span class="idx">C</span>
+    <h2>Revision history</h2>
+    <p>Four revisions, four separate files, four separate review records. Nothing here is ever rewritten — a revision is closed by the next one, not replaced by it.</p>
+  </div>
+
+  <div class="card" style="padding:4px 18px">
+    <div class="revtree">
+      <div class="revrow">
+        <div class="revmark"><span class="tag">R1</span><span class="ln"></span></div>
+        <div class="revbody">
+          <div class="revtop"><b>Submitted for client review</b><span class="badge b-stop">Revision required</span></div>
+          <div class="revmeta">Column_R1.pdf · 12 Aug 2026 · uploaded by S. Nair · reviewed by J. Harland 15 Aug</div>
+          <div class="revfacts"><span class="fact"><b>5</b> annotations</span><span class="fact"><b>5</b> PM responses</span><span class="fact"><b>20</b> pages</span></div>
+          <div class="revacts"><button class="btn ghost sm">View</button><button class="btn ghost sm">Review record</button></div>
+        </div>
+      </div>
+      <div class="revrow">
+        <div class="revmark"><span class="tag">R2</span><span class="ln"></span></div>
+        <div class="revbody">
+          <div class="revtop"><b>Reissued after R1 comments</b><span class="badge b-warn">Approved with comments</span></div>
+          <div class="revmeta">Column_R2.pdf · 02 Sep 2026 · uploaded by S. Nair · reviewed by J. Harland 05 Sep</div>
+          <div class="revfacts"><span class="fact"><b>3</b> annotations</span><span class="fact"><b>3</b> PM responses</span><span class="fact"><b>20</b> pages</span></div>
+          <div class="revacts"><button class="btn ghost sm">View</button><button class="btn ghost sm">Review record</button><button class="btn ghost sm" data-cmp="R1|R2"><svg class="i"><use href="#i-compare"/></svg> Compare with R1</button></div>
+        </div>
+      </div>
+      <div class="revrow">
+        <div class="revmark"><span class="tag">R3</span><span class="ln"></span></div>
+        <div class="revbody">
+          <div class="revtop"><b>Connection detail reissued</b><span class="badge b-stop">Revision required</span></div>
+          <div class="revmeta">Column_R3.pdf · 21 Sep 2026 · uploaded by S. Nair · reviewed by J. Harland 21 Sep 14:22</div>
+          <div class="revfacts"><span class="fact"><b id="histR3Count">3</b> annotations</span><span class="fact"><b>2</b> open</span><span class="fact"><b>20</b> pages</span></div>
+          <div class="revacts"><button class="btn ghost sm" data-scroll="client">Open review</button><button class="btn ghost sm" data-scroll="pm">Client annotations</button><button class="btn ghost sm" data-cmp="R2|R3"><svg class="i"><use href="#i-compare"/></svg> Compare with R2</button></div>
+        </div>
+      </div>
+      <div class="revrow current">
+        <div class="revmark"><span class="tag">R4</span><span class="ln"></span></div>
+        <div class="revbody">
+          <div class="revtop"><b>Current revision</b><span class="badge b-warn">Under client review</span></div>
+          <div class="revmeta">Column_R4.pdf · 21 Sep 2026, 17:40 · uploaded by R. Deshmukh · 22 pages</div>
+          <div class="revfacts"><span class="fact"><b>0</b> annotations yet</span><span class="fact"><b>3</b> R3 comments addressed</span><span class="fact"><b>+2</b> pages vs R3</span></div>
+          <div class="revacts"><button class="btn ghost sm">View</button><button class="btn ghost sm">Review</button><button class="btn sm" data-cmp="R3|R4"><svg class="i"><use href="#i-compare"/></svg> Compare revisions</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes3">
+    <div class="note"><h4>An annotation belongs to one revision</h4><p>R3's marks carry <span class="mono">revision_id = REV-R3</span> forever. They are never copied onto R4, because that would put words in the client's mouth about a drawing they haven't seen.</p></div>
+    <div class="note green"><h4>Responses point back</h4><p>A PM reply references the annotation ID it answers, so "addressed in R4" stays traceable to the exact remark that caused the change.</p></div>
+    <div class="note red"><h4>No overwrite, ever</h4><p>Uploading R4 marks R3 superseded and leaves the file, the decision and the timestamps untouched. Superseded revisions stay viewable for the audit trail.</p></div>
+  </div>
+</section>
+
+<!-- ================= COMPARISON ================= -->
+<section id="compare" class="wrap">
+  <div class="sec-head">
+    <span class="idx">D</span>
+    <h2>Comparing two revisions</h2>
+    <p>Both files are fetched read-only and drawn into a temporary view. Side-by-side stays in sync, overlay fades between them, and difference flags regions that changed visually.</p>
+  </div>
+
+  <div class="frame">
+    <div class="chrome">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="urlbar"><svg class="i" style="font-size:12px;color:var(--ok)"><use href="#i-lock"/></svg><span>portal.vertexsteel.com/pm/documents/DOC-0041/compare?from=R3&amp;to=R4</span></span>
+    </div>
+    <div class="appbar">
+      <button class="iconbtn" aria-label="Back"><svg class="i" style="font-size:15px"><use href="#i-chevL"/></svg></button>
+      <h3>Column Drawing</h3>
+      <span class="crumb">comparison view · originals unchanged</span>
+      <div class="right">
+        <div class="seg" role="group" aria-label="Comparison mode">
+          <button data-mode="side" aria-pressed="true"><svg class="i" style="font-size:14px"><use href="#i-compare"/></svg> Side by side</button>
+          <button data-mode="overlay" aria-pressed="false"><svg class="i" style="font-size:14px"><use href="#i-layers"/></svg> Overlay</button>
+          <button data-mode="diff" aria-pressed="false"><svg class="i" style="font-size:14px"><use href="#i-alert"/></svg> Difference</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="split pm">
+      <div class="vmain">
+        <div class="cmpbar">
+          <select class="revpick" id="cmpFrom" aria-label="Previous revision"><option>R1</option><option>R2</option><option selected>R3</option></select>
+          <span class="vs">VS</span>
+          <select class="revpick" id="cmpTo" aria-label="Current revision"><option>R2</option><option>R3</option><option selected>R4</option></select>
+          <span class="grp">
+            <button id="cmpPrev" aria-label="Previous page"><svg class="i" style="font-size:14px"><use href="#i-chevL"/></svg></button>
+            <span class="pg" id="cmpPageLbl">Page 4</span>
+            <button id="cmpNext" aria-label="Next page"><svg class="i" style="font-size:14px"><use href="#i-chevR"/></svg></button>
+          </span>
+          <span class="grp">
+            <button id="cmpZOut" aria-label="Zoom out"><svg class="i" style="font-size:14px"><use href="#i-zout"/></svg></button>
+            <span class="pg" id="cmpZoom">100%</span>
+            <button id="cmpZIn" aria-label="Zoom in"><svg class="i" style="font-size:14px"><use href="#i-zin"/></svg></button>
+          </span>
+          <span class="hits" id="cmpSync">Pages, zoom and scroll synchronised</span>
+          <span class="grp" style="margin-left:auto">
+            <button id="cmpOffsetDown" aria-label="Shift right-hand page back">−</button>
+            <span class="pg" id="cmpOffsetLbl">offset 0</span>
+            <button id="cmpOffsetUp" aria-label="Shift right-hand page forward">+</button>
+          </span>
+        </div>
+        <div class="cmpstage" id="cmpStage"></div>
+      </div>
+
+      <aside class="vside">
+        <div class="vsec">
+          <div class="vsec-h"><h4>Revision information</h4></div>
+          <div class="vsec-b">
+            <dl class="docinfo">
+              <dt>R3</dt><dd><span class="badge b-stop">Revision required</span></dd>
+              <dt>submitted</dt><dd>18 September 2026</dd>
+              <dt>pages</dt><dd>20</dd>
+            </dl>
+            <div style="height:1px;background:var(--rule-2);margin:11px 0"></div>
+            <dl class="docinfo">
+              <dt>R4</dt><dd><span class="badge b-warn">Under client review</span></dd>
+              <dt>submitted</dt><dd>21 September 2026</dd>
+              <dt>pages</dt><dd>22</dd>
+            </dl>
+            <p style="font-size:11.5px;color:var(--muted-2);margin-top:10px;line-height:1.45">R4 has two more pages. Pages after 12 are paired with an offset you can set by hand.</p>
+          </div>
+        </div>
+
+        <div class="vsec">
+          <div class="vsec-h"><h4>Change summary</h4><span class="cnt">R3 → R4</span></div>
+          <ul class="chg" id="chgList"></ul>
+          <div class="vsec-b" style="border-top:1px solid var(--rule-2)">
+            <p style="font-size:11.5px;color:var(--muted-2);line-height:1.5">Visual comparison flags regions where the two pages differ. It does not interpret engineering intent — a flagged region is a pixel difference until somebody confirms what it means. Entries marked <span class="mono">pm-authored</span> were written by the project manager.</p>
+            <button class="btn ghost sm" style="margin-top:9px" id="addChange"><svg class="i"><use href="#i-note"/></svg> Add change note</button>
+          </div>
+        </div>
+
+        <div class="vsec">
+          <div class="vsec-h"><h4>Previous client comments</h4><span class="cnt">from R3</span></div>
+          <ul class="alist" id="cmpAnn"></ul>
+          <div class="vsec-b" style="border-top:1px solid var(--rule-2)">
+            <p style="font-size:11.5px;color:var(--muted-2);line-height:1.5">Shown for reference only. These stay attached to R3 — a new remark on R4 is stored as a new annotation with <span class="mono">revision_id = REV-R4</span>.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DATA & SECURITY ================= -->
+<section id="data" class="wrap">
+  <div class="sec-head">
+    <span class="idx">E</span>
+    <h2>Behind the screens</h2>
+    <p>Three tables, one streaming route, and a download policy the PM controls.</p>
+  </div>
+
+  <div class="grid2">
+    <div class="card" style="padding:18px">
+      <h4 style="font-size:15px;color:var(--page-ink);margin-bottom:4px">annotations</h4>
+      <p style="font-size:12.5px;color:var(--page-muted);margin-bottom:8px">One row per mark. Geometry in page units, so it redraws at any zoom.</p>
+      <dl class="kv">
+        <dt>annotation_id</dt><dd>uuid</dd>
+        <dt>revision_id</dt><dd>uuid → document_revisions</dd>
+        <dt>page_number</dt><dd>integer</dd>
+        <dt>type</dt><dd>highlight · freehand · arrow · line · rectangle · ellipse · text · pin</dd>
+        <dt>x, y</dt><dd>numeric, page units</dd>
+        <dt>width, height</dt><dd>numeric, page units</dd>
+        <dt>points</dt><dd>jsonb, freehand path</dd>
+        <dt>text</dt><dd>the remark</dd>
+        <dt>properties</dt><dd>jsonb — colour, stroke, opacity</dd>
+        <dt>grid_ref</dt><dd>text, e.g. B5</dd>
+        <dt>status</dt><dd>open · addressed</dd>
+        <dt>created_by</dt><dd>uuid → users</dd>
+        <dt>created_at / updated_at</dt><dd>timestamptz</dd>
+      </dl>
+    </div>
+
+    <div>
+      <div class="card" style="padding:18px;margin-bottom:16px">
+        <h4 style="font-size:15px;color:var(--page-ink);margin-bottom:4px">annotation_responses</h4>
+        <p style="font-size:12.5px;color:var(--page-muted);margin-bottom:8px">A PM reply always names the annotation it answers.</p>
+        <dl class="kv">
+          <dt>response_id</dt><dd>uuid</dd>
+          <dt>annotation_id</dt><dd>uuid → annotations</dd>
+          <dt>body</dt><dd>reply text</dd>
+          <dt>internal</dt><dd>boolean — hidden from the client</dd>
+          <dt>resolved_in_revision</dt><dd>uuid → document_revisions</dd>
+          <dt>created_by / created_at</dt><dd>uuid, timestamptz</dd>
+        </dl>
+      </div>
+      <div class="card" style="padding:18px">
+        <h4 style="font-size:15px;color:var(--page-ink);margin-bottom:4px">revision_comparisons</h4>
+        <p style="font-size:12.5px;color:var(--page-muted);margin-bottom:8px">Optional. Records that a comparison happened, plus any summary the PM wrote.</p>
+        <dl class="kv">
+          <dt>id</dt><dd>uuid</dd>
+          <dt>project_id / document_id</dt><dd>uuid</dd>
+          <dt>old_revision_id / new_revision_id</dt><dd>uuid</dd>
+          <dt>compared_by / compared_at</dt><dd>uuid, timestamptz</dd>
+          <dt>change_summary</dt><dd>jsonb, pm-authored</dd>
+          <dt>notes</dt><dd>text</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid2" style="margin-top:16px">
+    <div class="card">
+      <div class="vsec-h"><h4>Document download policy</h4><span class="cnt">PM settings</span></div>
+      <div class="radios" id="polRadios" style="padding-bottom:13px">
+        <label class="radio sel-ok" data-tone="ok" data-pol="approved">
+          <input type="radio" name="policy" checked><span><span class="rt">Approved revisions only</span><span class="rd">Default. Under-review and superseded revisions are view-only in the browser.</span></span>
+        </label>
+        <label class="radio" data-tone="warn" data-pol="all">
+          <input type="radio" name="policy"><span><span class="rt">All client-visible revisions</span><span class="rd">Clients can download anything they're allowed to open, including drawings still under review.</span></span>
+        </label>
+      </div>
+      <div class="settingrow">
+        <div><div class="sr-t">Watermark in-review downloads</div><div class="sr-d">Stamps "For review — not for construction" on the served copy.</div></div>
+        <span class="badge b-ok" style="margin-left:auto">On</span>
+      </div>
+      <div class="vsec-b" style="border-top:1px solid var(--rule-2)">
+        <p style="font-size:12.5px;color:var(--page-muted);line-height:1.5">Change the policy and scroll back to the client workspace — the download control follows it. The rule lives in settings, not in the viewer code.</p>
+      </div>
+    </div>
+
+    <div class="card" style="padding:18px">
+      <h4 style="font-size:15px;color:var(--page-ink);margin-bottom:10px">How a page reaches the browser</h4>
+      <div class="flow">
+        <b>Browser</b><i>→</i><b>HTTPS</b><i>→</i><b>Backend API</b><i>→</i><b>Authenticate</b><i>→</i><b>Authorise project + document</b><i>→</i><b>VPN</b><i>→</i><b>Windows file server</b><i>→</i><b>Stream</b><i>→</i><b>Viewer</b>
+      </div>
+      <p style="font-size:12.5px;color:var(--page-muted);line-height:1.55;margin-top:12px">The browser asks for <span class="mono">/documents/DOC-0041/revisions/R3/stream</span>. It never learns a drive letter, a share name or a folder. The comparison view opens two of these streams and nothing else — no temporary merged file is written anywhere.</p>
+      <h4 style="font-size:14px;color:var(--page-ink);margin:16px 0 8px">Large drawings stay responsive</h4>
+      <dl class="kv">
+        <dt>rendering</dt><dd>Canvas per page, off-thread</dd>
+        <dt>loading</dt><dd>Lazy — current page plus neighbours</dd>
+        <dt>navigation</dt><dd>Thumbnail strip, no full load</dd>
+        <dt>cache</dt><dd>Rendered pages kept per zoom bucket</dd>
+        <dt>memory</dt><dd>Pages released outside the window</dd>
+        <dt>annotations</dt><dd>Vector overlay, redraw only</dd>
+      </dl>
+    </div>
+  </div>
+
+  <ul class="seclist" style="margin-top:16px">
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Original PDFs untouched</b><span>Marks live in Postgres. Nothing is flattened into the file.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>One revision, one review</b><span>Decisions and annotations are keyed to revision_id, never to the parent document.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>No annotation migration</b><span>Old marks are shown as reference on a comparison, never copied forward.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Streamed, authorised</b><span>Every page request re-checks the session, the project and the document.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>No paths leak</b><span>Responses carry IDs. File-system locations never reach the client.</span></div></li>
+    <li><svg class="i"><use href="#i-shield"/></svg><div><b>Full audit trail</b><span>Views, marks, decisions, replies and comparisons are all logged with who and when.</span></div></li>
+  </ul>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="mono">SteelPro · drawing review, annotation &amp; revision comparison · R1 · 21 Sep 2026</span>
+    <span style="margin-left:auto" class="mono">Original file never modified</span>
+  </div>
+</footer>
+<script>
+(function(){
+"use strict";
+var SVGNS="http://www.w3.org/2000/svg";
+var PAGES={R1:20,R2:20,R3:20,R4:22};
+var DATES={R1:"12.08.26",R2:"02.09.26",R3:"18.09.26",R4:"21.09.26"};
+
+/* ---------- theme + scroll links ---------- */
+var root=document.documentElement;
+document.getElementById("themeBtn").addEventListener("click",function(){
+  var cur=root.getAttribute("data-theme");
+  if(!cur){cur=window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light";}
+  root.setAttribute("data-theme",cur==="dark"?"light":"dark");
+});
+document.addEventListener("click",function(e){
+  var s=e.target.closest("[data-scroll]");
+  if(s){var t=document.getElementById(s.getAttribute("data-scroll"));if(t)t.scrollIntoView({behavior:"smooth",block:"start"});}
+  var c=e.target.closest("[data-cmp]");
+  if(c){var p=c.getAttribute("data-cmp").split("|");cmp.from=p[0];cmp.to=p[1];
+    document.getElementById("cmpFrom").value=p[0];document.getElementById("cmpTo").value=p[1];
+    drawCompare();document.getElementById("compare").scrollIntoView({behavior:"smooth",block:"start"});}
+});
+
+/* ---------- page renderer ---------- */
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;");}
+function titleBlock(rev,page,title){
+  var total=PAGES[rev];
+  return '<g><rect x="700" y="560" width="288" height="135" fill="#fff" stroke="#17222E" stroke-width="1.4"/>'
+  +'<line x1="700" y1="592" x2="988" y2="592" stroke="#17222E" stroke-width="1"/>'
+  +'<line x1="700" y1="624" x2="988" y2="624" stroke="#17222E" stroke-width="1"/>'
+  +'<line x1="700" y1="660" x2="988" y2="660" stroke="#17222E" stroke-width="1"/>'
+  +'<line x1="860" y1="624" x2="860" y2="695" stroke="#17222E" stroke-width="1"/>'
+  +'<text x="712" y="583" font-family="IBM Plex Sans Condensed,sans-serif" font-size="14" font-weight="700" fill="#0B2545">VERTEX STEEL DETAILING</text>'
+  +'<text x="712" y="613" font-family="IBM Plex Mono,monospace" font-size="10" fill="#5C6B7C">'+esc(title)+'</text>'
+  +'<text x="712" y="644" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8595A6">DWG No.</text>'
+  +'<text x="712" y="682" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8595A6">SHEET</text>'
+  +'<text x="872" y="644" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8595A6">REV</text>'
+  +'<text x="872" y="682" font-family="IBM Plex Mono,monospace" font-size="9" fill="#8595A6">DATE</text>'
+  +'<text x="772" y="644" font-family="IBM Plex Mono,monospace" font-size="12" font-weight="600" fill="#17222E">C-014</text>'
+  +'<text x="772" y="682" font-family="IBM Plex Mono,monospace" font-size="12" font-weight="600" fill="#17222E">'+page+" / "+total+'</text>'
+  +'<text x="912" y="644" font-family="IBM Plex Mono,monospace" font-size="12" font-weight="600" fill="#17222E">'+rev+'</text>'
+  +'<text x="898" y="682" font-family="IBM Plex Mono,monospace" font-size="11" font-weight="600" fill="#17222E">'+DATES[rev]+'</text></g>'
+  +'<text x="26" y="688" font-family="IBM Plex Mono,monospace" font-size="10" fill="#B3312A">FOR REVIEW — NOT FOR CONSTRUCTION</text>';
+}
+function gridBubble(x,y,label){
+  return '<g><circle cx="'+x+'" cy="'+y+'" r="18" fill="#fff" stroke="#17222E" stroke-width="1.4"/>'
+  +'<text x="'+x+'" y="'+(y+5)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="13" font-weight="600" fill="#17222E">'+label+'</text></g>';
+}
+function mono(x,y,t,size,fill){return '<text x="'+x+'" y="'+y+'" font-family="IBM Plex Mono,monospace" font-size="'+(size||10)+'" fill="'+(fill||"#17222E")+'">'+esc(t)+'</text>';}
+
+function page4(rev){
+  var n4=rev==="R4"||rev==="R3"?null:null;
+  var s='<g stroke="#17222E" fill="none" stroke-width="2">'
+  +'<rect x="180" y="120" width="80" height="440"/><line x1="204" y1="120" x2="204" y2="560"/><line x1="236" y1="120" x2="236" y2="560"/>'
+  +'<rect x="300" y="290" width="340" height="100"/><line x1="300" y1="312" x2="640" y2="312"/><line x1="300" y1="368" x2="640" y2="368"/>'
+  +'<rect x="272" y="262" width="28" height="156" fill="#E9F1F9"/>'
+  +'<line x1="204" y1="290" x2="236" y2="290"/><line x1="204" y1="390" x2="236" y2="390"/>'
+  +'</g>';
+  if(rev==="R4"){
+    s+='<path d="M300 390 L300 452 L420 390 Z" fill="none" stroke="#17222E" stroke-width="2"/>'
+      +mono(316,438,"PL 12 HAUNCH ADDED",10,"#17222E");
+  }else{
+    s+='<path d="M300 390 L300 424 L360 390" fill="none" stroke="#17222E" stroke-width="2"/>';
+  }
+  var bolts=rev==="R4"?[280,318,356,394]:[300,340,380];
+  var bs=rev==="R4"?7.5:6;
+  s+='<g fill="none" stroke="#17222E" stroke-width="1.8">';
+  for(var i=0;i<bolts.length;i++){s+='<circle cx="286" cy="'+bolts[i]+'" r="'+bs+'"/>';}
+  s+='</g>';
+  s+=mono(316,282,rev==="R4"?"4 No. M24 8.8 TB":"3 No. M20 8.8 TB",11);
+  s+=mono(316,262,"END PL 25 THK");
+  s+=mono(660,318,"UB 406x178x60");
+  s+=mono(660,336,"BEAM B-27");
+  s+=mono(120,588,"UC 254x254x89");
+  s+=mono(316,500,"6 CFW ALL ROUND");
+  if(rev==="R3"){s+=mono(620,470,"SEE NOTE 5 FOR SHIMS",10,"#17222E");}
+  s+='<g stroke="#2D6CA8" stroke-width="1.2">'
+   +'<line x1="170" y1="'+bolts[0]+'" x2="120" y2="'+bolts[0]+'"/><line x1="170" y1="'+bolts[bolts.length-1]+'" x2="120" y2="'+bolts[bolts.length-1]+'"/>'
+   +'<line x1="132" y1="'+bolts[0]+'" x2="132" y2="'+bolts[bolts.length-1]+'"/></g>'
+   +'<text x="112" y="'+((bolts[0]+bolts[bolts.length-1])/2)+'" transform="rotate(-90 112 '+((bolts[0]+bolts[bolts.length-1])/2)+')" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="#2D6CA8">'+(rev==="R4"?"3 @ 38 = 114":"2 @ 40 = 80")+'</text>';
+  s+=gridBubble(220,72,"B5")+'<line x1="220" y1="90" x2="220" y2="120" stroke="#17222E" stroke-width="1.2"/>';
+  return s+titleBlock(rev,4,"MOMENT CONNECTION — GRID B5");
+}
+function page7(rev){
+  var s='<g stroke="#17222E" fill="none" stroke-width="1.6">';
+  for(var i=0;i<4;i++){s+='<line x1="'+(180+i*160)+'" y1="120" x2="'+(180+i*160)+'" y2="500"/>';}
+  for(var j=0;j<3;j++){s+='<line x1="180" y1="'+(140+j*160)+'" x2="660" y2="'+(140+j*160)+'"/>';}
+  s+='</g>';
+  s+='<g stroke="#17222E" stroke-width="5" opacity=".85"><line x1="180" y1="300" x2="660" y2="300"/><line x1="340" y1="140" x2="340" y2="460"/></g>';
+  s+=gridBubble(340,72,"C2")+'<line x1="340" y1="90" x2="340" y2="120" stroke="#17222E" stroke-width="1.2"/>';
+  s+='<g stroke="#2D6CA8" stroke-width="1.2"><line x1="180" y1="520" x2="180" y2="560"/><line x1="340" y1="520" x2="340" y2="560"/><line x1="340" y1="545" x2="180" y2="545"/></g>';
+  s+='<text x="260" y="538" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="13" font-weight="600" fill="#2D6CA8">'+(rev==="R4"?"7 500":"7 200")+'</text>';
+  s+=mono(180,596,"GRID C1 TO C2 — CENTRE TO CENTRE",10,"#5C6B7C");
+  s+=mono(430,300-10,"BEAM B-27 OVER");
+  return s+titleBlock(rev,7,"FRAMING PLAN LEVEL 2 — GRID C2");
+}
+function page9(rev){
+  var rows=[["MARK","SIZE","GRADE","QTY"],["B5-01","M20 x 70","8.8","24"],
+    ["D4-01",rev==="R4"?"M24 x 80":"M20 x 80","8.8",rev==="R4"?"16":"12"],
+    ["D4-02","M16 x 55","8.8","48"]];
+  if(rev==="R4")rows.push(["D4-03","M24 x 80","8.8","8"]);
+  var s='<g>';
+  var y=200;
+  for(var r=0;r<rows.length;r++){
+    s+='<rect x="120" y="'+y+'" width="520" height="44" fill="'+(r===0?"#E9F1F9":"#fff")+'" stroke="#17222E" stroke-width="1.2"/>';
+    for(var c=0;c<4;c++){
+      s+='<text x="'+(140+c*130)+'" y="'+(y+28)+'" font-family="IBM Plex Mono,monospace" font-size="13" font-weight="'+(r===0?"600":"400")+'" fill="#17222E">'+esc(rows[r][c])+'</text>';
+    }
+    y+=44;
+  }
+  s+='</g>';
+  s+=gridBubble(380,120,"D4");
+  s+=mono(120,y+34,"BOLT SCHEDULE — ALL BOLTS TO BS EN 14399",11,"#5C6B7C");
+  return s+titleBlock(rev,9,"BOLT SCHEDULE — GRID D4");
+}
+function page12(rev){
+  var notes=["1. ALL DIMENSIONS IN MILLIMETRES.","2. DO NOT SCALE FROM THIS DRAWING.",
+  "3. STEEL GRADE S355JR UNLESS NOTED.","4. WELDS 6 CFW UNLESS NOTED.",
+  "5. SHIM PACKS TO BE SUPPLIED LOOSE.","6. HOLES 2mm CLEARANCE.","7. PRIME AFTER FABRICATION."];
+  if(rev==="R4")notes.push("8. SHIM PACK DETAIL REVISED — SEE SHEET 4.");
+  var s=mono(120,160,"GENERAL NOTES",14,"#0B2545");
+  for(var i=0;i<notes.length;i++){s+=mono(120,210+i*38,notes[i],12);}
+  return s+titleBlock(rev,12,"GENERAL NOTES");
+}
+function pageGeneric(rev,p){
+  var s='<g stroke="#D8DFE7" fill="none" stroke-width="1">';
+  for(var i=1;i<10;i++)s+='<line x1="'+(100+i*60)+'" y1="120" x2="'+(100+i*60)+'" y2="520"/>';
+  for(var j=1;j<7;j++)s+='<line x1="100" y1="'+(120+j*60)+'" x2="640" y2="'+(120+j*60)+'"/>';
+  s+='</g><g stroke="#17222E" fill="none" stroke-width="2"><rect x="160" y="180" width="380" height="260"/><line x1="160" y1="310" x2="540" y2="310"/><line x1="350" y1="180" x2="350" y2="440"/></g>';
+  s+=mono(160,150,"SHEET "+p+" — GENERAL ARRANGEMENT",12,"#5C6B7C");
+  return s+titleBlock(rev,p,"GENERAL ARRANGEMENT");
+}
+function buildPage(rev,p){
+  var body;
+  if(p===4)body=page4(rev);else if(p===7)body=page7(rev);else if(p===9)body=page9(rev);
+  else if(p===12)body=page12(rev);else body=pageGeneric(rev,p);
+  return '<svg viewBox="0 0 1000 707" role="img" aria-label="Drawing sheet '+p+', revision '+rev+'">'
+  +'<rect width="1000" height="707" fill="#fff"/><rect x="12" y="12" width="976" height="683" fill="none" stroke="#17222E" stroke-width="1.6"/>'
+  +body+'</svg>';
+}
+
+/* ---------- annotation store ---------- */
+var seq=4;
+var ANN=[
+  {id:"ANN-0001",rev:"R3",page:4,type:"rectangle",x:250,y:255,w:120,h:170,text:"Please revise this connection detail. Bolt group at Grid B5 clashes with the brace gusset — take it to 4 No. M24 8.8.",grid:"B5",color:"#C0392B",by:"J. Harland (client)",at:"2026-09-21T14:22:10Z",up:"2026-09-21T14:22:10Z",status:"addressed",reply:"Connection revised to 4 No. M24 8.8 and the haunch extended. Updated in Revision R4.",replyAt:"21 Sep 17:38"},
+  {id:"ANN-0002",rev:"R3",page:7,type:"arrow",x:300,y:470,w:120,h:70,text:"Dimension appears incorrect — grid C1 to C2 should be 7 500 to match the architect's setting-out.",grid:"C2",color:"#C0392B",by:"J. Harland (client)",at:"2026-09-21T14:27:44Z",up:"2026-09-21T14:27:44Z",status:"addressed",reply:"Agreed, checked against the setting-out drawing. Corrected to 7 500 in R4.",replyAt:"21 Sep 17:39"},
+  {id:"ANN-0003",rev:"R3",page:9,type:"ellipse",x:120,y:244,w:520,h:44,text:"Please verify bolt specification for D4 — M20 looks light against the reaction shown.",grid:"D4",color:"#C0392B",by:"P. Okafor (client)",at:"2026-09-21T14:31:02Z",up:"2026-09-21T14:31:02Z",status:"open",note:"Checked with design team — reaction is 410 kN, M20 is under-sized. Uprate to M24 and add a third row."}
+];
+function annots(rev,page){return ANN.filter(function(a){return a.rev===rev&&(page===undefined||a.page===page);});}
+function numOf(a){var l=annots(a.rev);return l.indexOf(a)+1;}
+
+/* ---------- annotation svg ---------- */
+function annSvg(a,selected){
+  var c=a.color||"#C0392B",g="",sw=3;
+  if(a.type==="highlight"){g='<rect x="'+a.x+'" y="'+a.y+'" width="'+a.w+'" height="'+a.h+'" fill="'+c+'" opacity=".28"/>';}
+  else if(a.type==="rectangle"){g='<rect x="'+a.x+'" y="'+a.y+'" width="'+a.w+'" height="'+a.h+'" fill="none" stroke="'+c+'" stroke-width="'+sw+'"/>';}
+  else if(a.type==="ellipse"){g='<ellipse cx="'+(a.x+a.w/2)+'" cy="'+(a.y+a.h/2)+'" rx="'+Math.abs(a.w/2)+'" ry="'+Math.abs(a.h/2)+'" fill="none" stroke="'+c+'" stroke-width="'+sw+'"/>';}
+  else if(a.type==="line"){g='<line x1="'+a.x+'" y1="'+a.y+'" x2="'+(a.x+a.w)+'" y2="'+(a.y+a.h)+'" stroke="'+c+'" stroke-width="'+sw+'"/>';}
+  else if(a.type==="arrow"){
+    var x2=a.x+a.w,y2=a.y+a.h,ang=Math.atan2(a.h,a.w),L=16;
+    g='<line x1="'+a.x+'" y1="'+a.y+'" x2="'+x2+'" y2="'+y2+'" stroke="'+c+'" stroke-width="'+sw+'"/>'
+     +'<path d="M'+x2+' '+y2+' L'+(x2-L*Math.cos(ang-0.4))+' '+(y2-L*Math.sin(ang-0.4))+' L'+(x2-L*Math.cos(ang+0.4))+' '+(y2-L*Math.sin(ang+0.4))+' Z" fill="'+c+'"/>';
+  }
+  else if(a.type==="freehand"){g='<polyline points="'+(a.points||[]).join(" ")+'" fill="none" stroke="'+c+'" stroke-width="'+sw+'" stroke-linejoin="round" stroke-linecap="round"/>';}
+  else if(a.type==="text"){
+    g='<rect x="'+a.x+'" y="'+a.y+'" width="'+a.w+'" height="'+a.h+'" fill="#fff" stroke="'+c+'" stroke-width="2"/>';
+    var words=(a.text||"Text").split(" "),line="",ln=0,out="";
+    for(var i=0;i<words.length&&ln<4;i++){
+      if((line+" "+words[i]).length>Math.max(8,a.w/7)){out+='<text x="'+(a.x+8)+'" y="'+(a.y+20+ln*16)+'" font-family="IBM Plex Sans,sans-serif" font-size="13" fill="'+c+'">'+esc(line)+'</text>';line=words[i];ln++;}
+      else line=line?line+" "+words[i]:words[i];
+    }
+    if(ln<4)out+='<text x="'+(a.x+8)+'" y="'+(a.y+20+ln*16)+'" font-family="IBM Plex Sans,sans-serif" font-size="13" fill="'+c+'">'+esc(line)+'</text>';
+    g+=out;
+  }
+  else if(a.type==="pin"){
+    g='<path d="M'+a.x+' '+a.y+' c -14 -14 -22 -23 -22 -33 a 22 22 0 0 1 44 0 c 0 10 -8 19 -22 33 z" fill="'+c+'" stroke="#fff" stroke-width="2.5"/>';
+  }
+  var bx=Math.min(a.x,a.x+a.w),by=Math.min(a.y,a.y+a.h),bw=Math.abs(a.w),bh=Math.abs(a.h);
+  if(a.type==="pin"){bx=a.x-22;by=a.y-55;bw=44;bh=55;}
+  if(a.type==="freehand"&&a.points&&a.points.length){
+    var xs=[],ys=[];for(var k=0;k<a.points.length;k++){var pr=a.points[k].split(",");xs.push(+pr[0]);ys.push(+pr[1]);}
+    bx=Math.min.apply(null,xs);by=Math.min.apply(null,ys);bw=Math.max.apply(null,xs)-bx;bh=Math.max.apply(null,ys)-by;
+  }
+  var badge="";
+  if(a.text&&a.id){
+    var n=numOf(a);
+    badge='<g><circle cx="'+(bx+bw)+'" cy="'+by+'" r="13" fill="'+c+'" stroke="#fff" stroke-width="2"/>'
+    +'<text x="'+(bx+bw)+'" y="'+(by+4.5)+'" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="12" font-weight="700" fill="#fff">'+n+'</text></g>';
+  }
+  var sel=selected?'<rect class="sel-outline" x="'+(bx-8)+'" y="'+(by-8)+'" width="'+(bw+16)+'" height="'+(bh+16)+'"/>':"";
+  return '<g data-id="'+a.id+'">'+g+badge
+   +'<rect class="hit" x="'+(bx-6)+'" y="'+(by-6)+'" width="'+(bw+12)+'" height="'+(bh+12)+'" fill="transparent"/>'+sel+'</g>';
+}
+
+/* ---------- viewer ---------- */
+function Viewer(cfg){
+  var v=this;
+  v.rev=cfg.rev;v.page=cfg.page||4;v.zoom=1;v.editable=!!cfg.editable;v.sel=null;
+  v.wrap=document.getElementById(cfg.wrap);v.stage=document.getElementById(cfg.stage);
+  v.tool="rect";v.color="#C0392B";v.undo=[];v.redo=[];v.onSelect=cfg.onSelect||function(){};
+  v.render();
+  v.bindChrome(cfg);
+}
+Viewer.prototype.baseW=function(){
+  var w=this.stage.clientWidth-36;return Math.max(340,Math.min(w,900));
+};
+Viewer.prototype.render=function(){
+  this.wrap.innerHTML=buildPage(this.rev,this.page);
+  var layer=document.createElementNS(SVGNS,"svg");
+  layer.setAttribute("viewBox","0 0 1000 707");
+  layer.setAttribute("class","alayer"+(this.editable&&this.tool==="select"?" selectmode":""));
+  if(!this.editable)layer.style.cursor="pointer";
+  this.wrap.appendChild(layer);this.layer=layer;
+  this.wrap.style.width=Math.round(this.baseW()*this.zoom)+"px";
+  this.paint();
+  if(this.editable)this.bindDraw();else this.bindPick();
+};
+Viewer.prototype.paint=function(){
+  var v=this,list=annots(v.rev,v.page),s="";
+  for(var i=0;i<list.length;i++)s+=annSvg(list[i],v.sel===list[i].id);
+  v.layer.innerHTML=s;
+};
+Viewer.prototype.go=function(p){
+  var max=PAGES[this.rev];
+  this.page=Math.max(1,Math.min(max,p));
+  this.render();
+  if(this.pageIn)this.pageIn.value=this.page;
+};
+Viewer.prototype.setZoom=function(z){
+  this.zoom=Math.max(.5,Math.min(3,z));
+  this.wrap.style.width=Math.round(this.baseW()*this.zoom)+"px";
+  if(this.zoomLbl)this.zoomLbl.textContent=Math.round(this.zoom*100)+"%";
+};
+Viewer.prototype.flash=function(a){
+  var bx=Math.min(a.x,a.x+a.w)-18,by=Math.min(a.y,a.y+a.h)-18;
+  if(a.type==="pin"){bx=a.x-40;by=a.y-73;}
+  var r=document.createElementNS(SVGNS,"rect");
+  r.setAttribute("x",bx);r.setAttribute("y",by);
+  r.setAttribute("width",Math.abs(a.w)+36||80);r.setAttribute("height",Math.abs(a.h)+36||80);
+  r.setAttribute("fill","#2D6CA8");r.setAttribute("opacity","0");r.setAttribute("class","flashbox");
+  this.layer.appendChild(r);
+  setTimeout(function(){if(r.parentNode)r.parentNode.removeChild(r);},3200);
+};
+Viewer.prototype.pt=function(e){
+  var r=this.layer.getBoundingClientRect();
+  return {x:(e.clientX-r.left)/r.width*1000,y:(e.clientY-r.top)/r.height*707};
+};
+Viewer.prototype.bindPick=function(){
+  var v=this;
+  v.layer.addEventListener("click",function(e){
+    var g=e.target.closest("g[data-id]");if(!g)return;
+    v.sel=g.getAttribute("data-id");v.paint();v.onSelect(v.sel);
+  });
+};
+Viewer.prototype.snapshot=function(){
+  this.undo.push(JSON.stringify(ANN));if(this.undo.length>40)this.undo.shift();this.redo.length=0;
+};
+Viewer.prototype.bindDraw=function(){
+  var v=this,drawing=false,start=null,prev=null,pts=null;
+  v.layer.addEventListener("pointerdown",function(e){
+    if(v.tool==="select"){
+      var g=e.target.closest("g[data-id]");
+      v.sel=g?g.getAttribute("data-id"):null;v.paint();v.onSelect(v.sel);return;
+    }
+    e.preventDefault();
+    v.layer.setPointerCapture(e.pointerId);
+    start=v.pt(e);drawing=true;pts=[Math.round(start.x)+","+Math.round(start.y)];
+    prev=document.createElementNS(SVGNS,"g");v.layer.appendChild(prev);
+  });
+  v.layer.addEventListener("pointermove",function(e){
+    if(!drawing)return;
+    var p=v.pt(e);
+    if(v.tool==="freehand")pts.push(Math.round(p.x)+","+Math.round(p.y));
+    prev.innerHTML=annSvg(v.draft(start,p,pts),false);
+  });
+  function finish(e){
+    if(!drawing)return;drawing=false;
+    var p=v.pt(e),d=v.draft(start,p,pts);
+    if(prev&&prev.parentNode)prev.parentNode.removeChild(prev);
+    var tiny=Math.abs(d.w)<8&&Math.abs(d.h)<8;
+    if(tiny&&v.tool!=="pin"&&v.tool!=="text"){v.paint();return;}
+    v.snapshot();
+    seq++;
+    var id="ANN-"+("000"+seq).slice(-4),now=new Date().toISOString();
+    var a={id:id,rev:v.rev,page:v.page,type:d.type,x:Math.round(d.x),y:Math.round(d.y),
+      w:Math.round(d.w),h:Math.round(d.h),points:d.points,text:"",grid:gridFor(v.page),
+      color:v.color,by:"J. Harland (client)",at:now,up:now,status:"open"};
+    if(a.type==="text")a.text="New note";
+    ANN.push(a);v.sel=id;v.paint();v.onSelect(id,true);
+  }
+  v.layer.addEventListener("pointerup",finish);
+  v.layer.addEventListener("pointercancel",finish);
+};
+Viewer.prototype.draft=function(s,p,pts){
+  var map={rect:"rectangle",ellipse:"ellipse",highlight:"highlight",line:"line",arrow:"arrow",freehand:"freehand",text:"text",pin:"pin"};
+  var t=map[this.tool]||"rectangle";
+  var x=s.x,y=s.y,w=p.x-s.x,h=p.y-s.y;
+  if(t==="rectangle"||t==="ellipse"||t==="highlight"||t==="text"){
+    x=Math.min(s.x,p.x);y=Math.min(s.y,p.y);w=Math.abs(p.x-s.x);h=Math.abs(p.y-s.y);
+    if(t==="text"&&w<60){w=190;h=64;}
+  }
+  if(t==="pin"){x=s.x;y=s.y;w=0;h=0;}
+  return {type:t,x:x,y:y,w:w,h:h,points:t==="freehand"?pts.slice():null,color:this.color,text:t==="text"?"New note":""};
+};
+function gridFor(p){return p===4?"B5":p===7?"C2":p===9?"D4":p===12?"—":"—";}
+Viewer.prototype.bindChrome=function(c){
+  var v=this;
+  function on(id,fn){var el=document.getElementById(id);if(el)el.addEventListener("click",fn);return el;}
+  on(c.prefix+"Prev",function(){v.go(v.page-1);});
+  on(c.prefix+"Next",function(){v.go(v.page+1);});
+  on(c.prefix+"ZIn",function(){v.setZoom(v.zoom+.25);});
+  on(c.prefix+"ZOut",function(){v.setZoom(v.zoom-.25);});
+  on(c.prefix+"Fit",function(){v.setZoom(1);});
+  on(c.prefix+"Full",function(){
+    v.stage.classList.toggle("fs");
+    v.setZoom(v.zoom);
+  });
+  v.zoomLbl=document.getElementById(c.prefix+"Zoom");
+  v.pageIn=document.getElementById(c.prefix+"PageIn");
+  if(v.pageIn)v.pageIn.addEventListener("change",function(){var n=parseInt(v.pageIn.value,10);v.go(isNaN(n)?v.page:n);});
+};
+
+/* ---------- client workspace ---------- */
+var CL=new Viewer({wrap:"clWrap",stage:"clStage",rev:"R3",page:4,editable:true,prefix:"cl",onSelect:onClientSelect});
+var selSec=document.getElementById("clSelSec"),selText=document.getElementById("clSelText"),
+    recEl=document.getElementById("clRecord"),selId=document.getElementById("clSelId");
+
+function find(id){for(var i=0;i<ANN.length;i++)if(ANN[i].id===id)return ANN[i];return null;}
+function fmt(d){try{var t=new Date(d);return t.toISOString().replace("T"," ").slice(0,16)+" UTC";}catch(e){return d;}}
+function record(a){
+  function row(k,v,cls){return '<span class="k">'+k+'</span>: <span class="'+(cls||"s")+'">'+esc(v)+'</span>\n';}
+  return row("annotation_id",a.id)+row("revision_id","REV-"+a.rev)+row("page_number",a.page,"n")
+   +row("type",a.type)+row("x",Math.round(a.x),"n")+row("y",Math.round(a.y),"n")
+   +row("width",Math.round(a.w),"n")+row("height",Math.round(a.h),"n")
+   +(a.points?row("points",a.points.length+" pts","n"):"")
+   +row("grid_ref",a.grid||"—")+row("text",(a.text||"").slice(0,42)+((a.text||"").length>42?"…":""))
+   +row("properties",'{color:'+a.color+', stroke:3}')+row("created_by",a.by)
+   +row("created_at",fmt(a.at))+row("updated_at",fmt(a.up))+row("status",a.status);
+}
+function onClientSelect(id,isNew){
+  if(!id){selSec.hidden=true;CL.sel=null;return;}
+  var a=find(id);if(!a)return;
+  selSec.hidden=false;selId.textContent=a.id;
+  selText.value=a.text||"";recEl.innerHTML=record(a);
+  if(isNew){selText.focus();}
+  renderClientList();
+}
+document.getElementById("clSaveText").addEventListener("click",function(){
+  var a=find(CL.sel);if(!a)return;
+  a.text=selText.value.trim();a.up=new Date().toISOString();
+  recEl.innerHTML=record(a);CL.paint();renderClientList();gate();
+});
+document.getElementById("clDelSel").addEventListener("click",delSel);
+document.getElementById("clDel").addEventListener("click",delSel);
+function delSel(){
+  var a=find(CL.sel);if(!a)return;
+  CL.snapshot();
+  ANN.splice(ANN.indexOf(a),1);CL.sel=null;selSec.hidden=true;CL.paint();renderClientList();gate();
+}
+document.getElementById("clUndo").addEventListener("click",function(){
+  if(!CL.undo.length)return;
+  CL.redo.push(JSON.stringify(ANN));
+  ANN.length=0;JSON.parse(CL.undo.pop()).forEach(function(a){ANN.push(a);});
+  CL.sel=null;selSec.hidden=true;CL.paint();renderClientList();gate();
+});
+document.getElementById("clRedo").addEventListener("click",function(){
+  if(!CL.redo.length)return;
+  CL.undo.push(JSON.stringify(ANN));
+  ANN.length=0;JSON.parse(CL.redo.pop()).forEach(function(a){ANN.push(a);});
+  CL.sel=null;selSec.hidden=true;CL.paint();renderClientList();gate();
+});
+document.getElementById("clTools").addEventListener("click",function(e){
+  var b=e.target.closest(".tool[data-tool]");if(!b)return;
+  var all=this.querySelectorAll(".tool");
+  for(var i=0;i<all.length;i++)all[i].classList.remove("on");
+  b.classList.add("on");CL.tool=b.getAttribute("data-tool");
+  document.getElementById("clToolName").textContent=b.getAttribute("title");
+  CL.layer.classList.toggle("selectmode",CL.tool==="select");
+});
+document.getElementById("clColors").addEventListener("click",function(e){
+  var b=e.target.closest(".sw");if(!b)return;
+  var all=this.querySelectorAll(".sw");
+  for(var i=0;i<all.length;i++)all[i].classList.remove("on");
+  b.classList.add("on");CL.color=b.getAttribute("data-color");
+});
+function renderClientList(){
+  var list=annots("R3"),el=document.getElementById("clList"),s="";
+  for(var i=0;i<list.length;i++){
+    var a=list[i];
+    s+='<li class="aitem'+(CL.sel===a.id?" on":"")+'" data-id="'+a.id+'">'
+     +'<span class="num'+(a.status==="addressed"?" ok":"")+'">'+(i+1)+'</span>'
+     +'<div class="ab"><div class="am"><b>Page '+a.page+'</b><span class="loc">'+(a.grid||"—")+'</span>'
+     +'<span class="loc" style="color:var(--muted);background:var(--paper)">'+a.type+'</span></div>'
+     +'<p>'+(a.text?esc(a.text):"<em style=\"color:var(--muted-2)\">No remark yet — select it and write one.</em>")+'</p>'
+     +'<time>'+a.id+' · '+fmt(a.at).slice(0,16)+'</time></div></li>';
+  }
+  if(!list.length)s='<li class="aitem" style="cursor:default"><div class="ab"><p style="color:var(--muted-2)">No annotations on R3. Draw on the sheet to add one.</p></div></li>';
+  el.innerHTML=s;
+  document.getElementById("clListCount").textContent=list.length;
+  document.getElementById("clCount").textContent=list.length+" annotation"+(list.length===1?"":"s")+" on R3";
+  var h=document.getElementById("histR3Count");if(h)h.textContent=list.length;
+  renderPmList();
+}
+document.getElementById("clList").addEventListener("click",function(e){
+  var li=e.target.closest(".aitem[data-id]");if(!li)return;
+  var a=find(li.getAttribute("data-id"));if(!a)return;
+  CL.sel=a.id;if(CL.page!==a.page)CL.go(a.page);else CL.paint();
+  CL.flash(a);onClientSelect(a.id);
+});
+
+/* review gate */
+var gateEl=document.getElementById("clGate"),submitBtn=document.getElementById("clSubmit"),
+    overall=document.getElementById("clOverall"),radios=document.getElementById("clRadios");
+function decision(){
+  var r=radios.querySelector("input:checked");
+  return r?r.closest(".radio").getAttribute("data-val"):"approved";
+}
+function gate(){
+  var d=decision(),n=annots("R3").length,txt=overall.value.trim(),
+      withText=annots("R3").filter(function(a){return a.text&&a.text.trim();}).length;
+  gateEl.innerHTML="";submitBtn.disabled=false;
+  if(d==="revision_required"&&n===0&&!txt){
+    gateEl.innerHTML='<div class="blocker"><svg class="i"><use href="#i-alert"/></svg><div>Revision required needs a reason. Add at least one annotation or write a comment before submitting.</div></div>';
+    submitBtn.disabled=true;
+  }else if(d==="revision_required"){
+    gateEl.innerHTML='<div class="okbox"><svg class="i"><use href="#i-check"/></svg><div>'+n+' annotation'+(n===1?"":"s")+' ('+withText+' with a remark) will be sent back with this decision.</div></div>';
+  }else if(d==="approved_with_comments"&&n>0){
+    gateEl.innerHTML='<div class="okbox"><svg class="i"><use href="#i-check"/></svg><div>'+n+' annotation'+(n===1?"":"s")+' will be attached to the approval and carried into the next revision by the PM.</div></div>';
+  }else if(d==="approved"&&n>0){
+    gateEl.innerHTML='<div class="blocker" style="background:var(--warn-bg);border-color:var(--warn-line);color:#7A4A05"><svg class="i" style="color:var(--warn)"><use href="#i-alert"/></svg><div>You still have '+n+' annotation'+(n===1?"":"s")+' on this revision. Approving without comments leaves them unanswered — consider "approved with comments".</div></div>';
+  }
+}
+radios.addEventListener("change",function(){
+  var ls=radios.querySelectorAll(".radio");
+  for(var i=0;i<ls.length;i++){
+    ls[i].classList.remove("sel-ok","sel-warn","sel-stop");
+    if(ls[i].querySelector("input").checked)ls[i].classList.add("sel-"+ls[i].getAttribute("data-tone"));
+  }
+  gate();
+});
+overall.addEventListener("input",gate);
+submitBtn.addEventListener("click",function(){
+  if(submitBtn.disabled)return;
+  var d=decision(),label=d==="approved"?"Approved":d==="approved_with_comments"?"Approved with comments":"Revision required";
+  submitBtn.textContent="Review submitted — "+label;
+  submitBtn.style.background="var(--ok)";submitBtn.style.borderColor="var(--ok)";
+  gateEl.innerHTML='<div class="okbox"><svg class="i"><use href="#i-check"/></svg><div>Stored as <span class="mono">reviews.revision_id = REV-R3</span> with '+annots("R3").length+' annotations. R3 is now closed; the PM has been notified.</div></div>';
+  setTimeout(function(){submitBtn.textContent="Submit review";submitBtn.style.background="";submitBtn.style.borderColor="";gate();},3200);
+});
+
+/* download policy */
+var polRadios=document.getElementById("polRadios"),dlBtn=document.getElementById("clDownload"),
+    dlState=document.getElementById("clDlState");
+function applyPolicy(){
+  var all=polRadios.querySelector('[data-pol="all"] input').checked;
+  var span=dlBtn.querySelector("span");
+  if(all){
+    dlBtn.style.cursor="pointer";span.style.color="#C9D4DE";
+    dlBtn.title="Download Column_R3.pdf (watermarked)";
+    dlState.textContent="Allowed — watermarked";
+  }else{
+    dlBtn.style.cursor="not-allowed";span.style.color="#93A3B4";
+    dlBtn.title="R3 is under review — downloads are limited to approved revisions";
+    dlState.textContent="Locked — under review";
+  }
+}
+polRadios.addEventListener("change",function(){
+  var ls=polRadios.querySelectorAll(".radio");
+  for(var i=0;i<ls.length;i++){
+    ls[i].classList.remove("sel-ok","sel-warn");
+    if(ls[i].querySelector("input").checked)ls[i].classList.add("sel-"+ls[i].getAttribute("data-tone"));
+  }
+  applyPolicy();
+});
+
+/* ---------- PM view ---------- */
+var PM=new Viewer({wrap:"pmWrap",stage:"pmStage",rev:"R3",page:4,editable:false,prefix:"pm",onSelect:function(id){
+  selectPm(id,false);
+}});
+function renderPmList(){
+  var list=annots("R3"),el=document.getElementById("pmList");if(!el)return;
+  var s="",open=0;
+  for(var i=0;i<list.length;i++){
+    var a=list[i];if(a.status!=="addressed")open++;
+    s+='<li class="aitem'+(PM.sel===a.id?" on":"")+'" data-id="'+a.id+'">'
+     +'<span class="num'+(a.status==="addressed"?" ok":"")+'">'+(i+1)+'</span>'
+     +'<div class="ab"><div class="am"><b>Page '+a.page+' — Grid '+(a.grid||"—")+'</b>'
+     +'<span class="badge '+(a.status==="addressed"?"b-ok":"b-stop")+'">'+(a.status==="addressed"?"Addressed":"Open")+'</span></div>'
+     +'<p>'+(a.text?esc(a.text):"<em style=\"color:var(--muted-2)\">No remark</em>")+'</p>'
+     +'<time>'+esc(a.by)+' · '+fmt(a.at).slice(0,16)+'</time>'
+     +(a.reply?'<div class="reply"><b>PM RESPONSE · '+esc(a.replyAt||"")+'</b>'+esc(a.reply)+'</div>':"")
+     +(a.note?'<div class="inote"><b>INTERNAL NOTE — NOT VISIBLE TO CLIENT</b>'+esc(a.note)+'</div>':"")
+     +'<div class="revacts" style="margin-top:8px"><button class="btn ghost sm" data-act="reply"><svg class="i"><use href="#i-reply"/></svg> '+(a.reply?"Edit reply":"Reply")+'</button>'
+     +'<button class="btn ghost sm" data-act="addr">'+(a.status==="addressed"?"Reopen":"Mark addressed")+'</button></div>'
+     +'<div class="replybox" hidden style="margin-top:8px"><textarea class="ta" style="min-height:58px">'+esc(a.reply||"")+'</textarea>'
+     +'<div style="display:flex;gap:7px;margin-top:7px"><button class="btn sm" data-act="save">Save response</button>'
+     +'<span style="font-size:11px;color:var(--muted-2);align-self:center" class="mono">→ annotation_responses</span></div></div>'
+     +'</div></li>';
+  }
+  el.innerHTML=s;
+  var c=document.getElementById("pmAnnCount");
+  if(c)c.textContent=list.length+" ("+open+" open)";
+}
+document.getElementById("pmList").addEventListener("click",function(e){
+  var li=e.target.closest(".aitem[data-id]");if(!li)return;
+  var a=find(li.getAttribute("data-id"));if(!a)return;
+  var act=e.target.closest("[data-act]");
+  if(act){
+    var kind=act.getAttribute("data-act");
+    if(kind==="reply"){var box=li.querySelector(".replybox");box.hidden=!box.hidden;if(!box.hidden)box.querySelector("textarea").focus();return;}
+    if(kind==="save"){
+      a.reply=li.querySelector(".replybox textarea").value.trim();
+      a.replyAt=new Date().toISOString().slice(11,16)+" today";
+      if(a.reply)a.status="addressed";
+      renderPmList();renderCmpAnn();return;
+    }
+    if(kind==="addr"){a.status=a.status==="addressed"?"open":"addressed";renderPmList();renderClientList();renderCmpAnn();return;}
+  }
+  selectPm(a.id,true);
+});
+function selectPm(id,scroll){
+  var a=find(id);if(!a)return;
+  PM.sel=id;
+  if(PM.page!==a.page)PM.go(a.page);else PM.paint();
+  PM.flash(a);renderPmList();
+  if(scroll)PM.stage.scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+document.getElementById("pmUpload").addEventListener("click",function(){
+  var b=this;b.textContent="R4 created — R3 kept intact";b.style.background="var(--ok)";b.style.borderColor="var(--ok)";
+  setTimeout(function(){b.innerHTML='<svg class="i"><use href="#i-up"/></svg> Upload R4';b.style.background="";b.style.borderColor="";},2600);
+});
+
+/* ---------- comparison ---------- */
+var CHANGES=[
+  {page:4,kind:"mod",title:"Bolt group at Grid B5",body:"Region differs between R3 and R4 around the end-plate bolt group.",src:"visual",region:{x:240,y:250,w:140,h:180},ann:"ANN-0001"},
+  {page:4,kind:"add",title:"Haunch added below beam",body:"Geometry present in R4 with no counterpart in R3.",src:"visual",region:{x:290,y:380,w:150,h:85}},
+  {page:4,kind:"del",title:"Shim note reference removed",body:"Text present in R3 is absent in R4.",src:"visual",region:{x:604,y:448,w:210,h:34}},
+  {page:4,kind:"mod",title:"Connection revised to 4 No. M24 8.8",body:"Bolt group uprated and work point held. Confirmed against the design reaction of 410 kN.",src:"pm",region:{x:240,y:250,w:140,h:180},ann:"ANN-0001"},
+  {page:7,kind:"mod",title:"Grid C1–C2 dimension",body:"Dimension text differs — 7 200 in R3, 7 500 in R4.",src:"visual",region:{x:170,y:505,w:190,h:56},ann:"ANN-0002"},
+  {page:9,kind:"mod",title:"Bolt specification row D4-01",body:"Row content differs between revisions.",src:"visual",region:{x:118,y:242,w:524,h:48},ann:"ANN-0003"},
+  {page:9,kind:"add",title:"New schedule row D4-03",body:"Row present in R4 only.",src:"visual",region:{x:118,y:330,w:524,h:48}},
+  {page:12,kind:"add",title:"General note 8 added",body:"Note block is one line longer in R4.",src:"visual",region:{x:110,y:448,w:560,h:40}}
+];
+var cmp={from:"R3",to:"R4",page:4,zoom:1,mode:"side",offset:0,opacity:50,active:null};
+var stage=document.getElementById("cmpStage");
+function toPage(){return Math.max(1,Math.min(PAGES[cmp.to],cmp.page+cmp.offset));}
+function pageSvgEl(rev,p,w){
+  return '<div class="pagewrap" style="width:'+w+'px">'+buildPage(rev,p)+'</div>';
+}
+function drawCompare(){
+  var w=Math.round(Math.min(stage.clientWidth-(cmp.mode==="side"?60:44),cmp.mode==="side"?520:780)*cmp.zoom);
+  if(w<240)w=240;
+  var fp=Math.min(cmp.page,PAGES[cmp.from]),tp=toPage();
+  document.getElementById("cmpPageLbl").textContent="Page "+cmp.page;
+  document.getElementById("cmpOffsetLbl").textContent="offset "+(cmp.offset>0?"+":"")+cmp.offset;
+  document.getElementById("cmpZoom").textContent=Math.round(cmp.zoom*100)+"%";
+  stage.classList.toggle("single",cmp.mode!=="side");
+  var s="";
+  if(cmp.mode==="side"){
+    s+='<div class="cmpcol"><div class="cmphead"><span class="dotc"></span>'+cmp.from+' · page '+fp+' / '+PAGES[cmp.from]+'</div>'+pageSvgEl(cmp.from,fp,w)+'</div>';
+    s+='<div class="cmpcol"><div class="cmphead"><span class="dotc n"></span>'+cmp.to+' · page '+tp+' / '+PAGES[cmp.to]+'</div>'+pageSvgEl(cmp.to,tp,w)+'</div>';
+    document.getElementById("cmpSync").textContent="Pages, zoom and scroll synchronised";
+  }else if(cmp.mode==="overlay"){
+    s+='<div class="cmpcol"><div class="cmphead"><span class="dotc"></span>'+cmp.from+' page '+fp+' under '+cmp.to+' page '+tp+'</div>'
+     +'<div class="overlaywrap" style="width:'+w+'px">'+buildPage(cmp.from,fp)
+     +'<div style="position:absolute;inset:0;opacity:'+(cmp.opacity/100)+'">'+buildPage(cmp.to,tp)+'</div></div>'
+     +'<div class="opacityrow"><span>'+cmp.from+'</span><input type="range" id="opSlider" min="0" max="100" value="'+cmp.opacity+'" aria-label="Overlay opacity"><span>'+cmp.to+' '+cmp.opacity+'%</span></div></div>';
+    document.getElementById("cmpSync").textContent="Overlay — drag the slider to fade between revisions";
+  }else{
+    var regs=CHANGES.filter(function(c){return c.page===cmp.page&&c.src==="visual";});
+    var ov="";
+    for(var i=0;i<regs.length;i++){
+      var c=regs[i],col=c.kind==="add"?"#16794A":c.kind==="del"?"#B3312A":"#B26A05";
+      var isAct=cmp.active===CHANGES.indexOf(c);
+      ov+='<rect x="'+c.region.x+'" y="'+c.region.y+'" width="'+c.region.w+'" height="'+c.region.h+'" fill="'+col+'" opacity="'+(isAct?.3:.18)+'" stroke="'+col+'" stroke-width="'+(isAct?4:2.5)+'"/>';
+    }
+    s+='<div class="cmpcol"><div class="difflegend"><span><i style="background:#16794A"></i>In R4 only</span><span><i style="background:#B3312A"></i>In R3 only</span><span><i style="background:#B26A05"></i>Differs</span>'
+     +'<span style="color:#93A3B4">visual difference · not an engineering reading</span></div>'
+     +'<div class="overlaywrap" style="width:'+w+'px">'+buildPage(cmp.to,tp)
+     +'<svg class="top" viewBox="0 0 1000 707">'+ov+'</svg></div>'
+     +'<div class="cmphead">'+cmp.to+' page '+tp+' with '+regs.length+' region'+(regs.length===1?"":"s")+' flagged against '+cmp.from+' page '+fp+'</div></div>';
+    document.getElementById("cmpSync").textContent="Difference — regions flagged, originals untouched";
+  }
+  stage.innerHTML=s;
+  var sl=document.getElementById("opSlider");
+  if(sl)sl.addEventListener("input",function(){cmp.opacity=+sl.value;drawCompare();});
+  renderChanges();
+}
+function renderChanges(){
+  var el=document.getElementById("chgList"),s="";
+  for(var i=0;i<CHANGES.length;i++){
+    var c=CHANGES[i];
+    s+='<li class="chgitem'+(cmp.active===i?" on":"")+'" data-i="'+i+'">'
+     +'<span class="tagc '+(c.kind==="add"?"add":c.kind==="del"?"del":"mod")+'">'+(c.kind==="add"?"ADDED":c.kind==="del"?"REMOVED":"CHANGED")+'</span>'
+     +'<div class="cb"><b>Page '+c.page+' — '+esc(c.title)+'</b><p>'+esc(c.body)+'</p>'
+     +'<span class="src">'+(c.src==="pm"?"pm-authored · R. Deshmukh":"visual difference · unconfirmed")+(c.ann?" · relates to "+c.ann:"")+'</span></div></li>';
+  }
+  el.innerHTML=s;
+}
+document.getElementById("chgList").addEventListener("click",function(e){
+  var li=e.target.closest(".chgitem[data-i]");if(!li)return;
+  var i=+li.getAttribute("data-i"),c=CHANGES[i];
+  cmp.active=i;cmp.page=c.page;
+  if(c.src==="visual"&&cmp.mode!=="diff"){setMode("diff");return;}
+  drawCompare();
+});
+function renderCmpAnn(){
+  var list=annots("R3"),el=document.getElementById("cmpAnn"),s="";
+  for(var i=0;i<list.length;i++){
+    var a=list[i];
+    s+='<li class="aitem" data-id="'+a.id+'"><span class="num'+(a.status==="addressed"?" ok":"")+'">'+(i+1)+'</span>'
+     +'<div class="ab"><div class="am"><b>Page '+a.page+' — Grid '+(a.grid||"—")+'</b>'
+     +'<span class="loc" style="color:var(--muted);background:var(--paper)">R3 reference</span></div>'
+     +'<p>'+(a.text?esc(a.text):"—")+'</p>'
+     +(a.status==="addressed"?'<div class="reply"><b>ADDRESSED IN R4</b>'+esc(a.reply||"Change made in R4.")+'</div>':'<div class="inote"><b>STILL OPEN</b>No R4 response recorded yet.</div>')
+     +'</div></li>';
+  }
+  el.innerHTML=s||'<li class="aitem"><div class="ab"><p style="color:var(--muted-2)">No annotations on R3.</p></div></li>';
+}
+document.getElementById("cmpAnn").addEventListener("click",function(e){
+  var li=e.target.closest(".aitem[data-id]");if(!li)return;
+  var a=find(li.getAttribute("data-id"));if(!a)return;
+  cmp.page=a.page;cmp.active=null;drawCompare();
+});
+function setMode(m){
+  cmp.mode=m;
+  var bs=document.querySelectorAll('.seg [data-mode]');
+  for(var i=0;i<bs.length;i++)bs[i].setAttribute("aria-pressed",bs[i].getAttribute("data-mode")===m?"true":"false");
+  drawCompare();
+}
+document.querySelector(".seg").addEventListener("click",function(e){
+  var b=e.target.closest("[data-mode]");if(b)setMode(b.getAttribute("data-mode"));
+});
+document.getElementById("cmpPrev").addEventListener("click",function(){cmp.page=Math.max(1,cmp.page-1);cmp.active=null;drawCompare();});
+document.getElementById("cmpNext").addEventListener("click",function(){cmp.page=Math.min(PAGES[cmp.from],cmp.page+1);cmp.active=null;drawCompare();});
+document.getElementById("cmpZIn").addEventListener("click",function(){cmp.zoom=Math.min(2.5,cmp.zoom+.25);drawCompare();});
+document.getElementById("cmpZOut").addEventListener("click",function(){cmp.zoom=Math.max(.5,cmp.zoom-.25);drawCompare();});
+document.getElementById("cmpOffsetUp").addEventListener("click",function(){cmp.offset++;drawCompare();});
+document.getElementById("cmpOffsetDown").addEventListener("click",function(){cmp.offset--;drawCompare();});
+document.getElementById("cmpFrom").addEventListener("change",function(){cmp.from=this.value;drawCompare();});
+document.getElementById("cmpTo").addEventListener("change",function(){cmp.to=this.value;drawCompare();});
+document.getElementById("addChange").addEventListener("click",function(){
+  var el=document.getElementById("chgList");
+  if(el.querySelector(".newchg"))return;
+  var li=document.createElement("li");
+  li.className="chgitem newchg";li.style.cursor="default";
+  li.innerHTML='<span class="tagc mod">NEW</span><div class="cb" style="flex:1"><textarea class="ta" style="min-height:54px" placeholder="Describe the change, e.g. Connection detail modified on page 4"></textarea>'
+   +'<div style="display:flex;gap:7px;margin-top:7px"><button class="btn sm" data-save>Save note</button><button class="btn ghost sm" data-cancel>Cancel</button></div></div>';
+  el.insertBefore(li,el.firstChild);
+  li.querySelector("textarea").focus();
+  li.addEventListener("click",function(e){
+    if(e.target.closest("[data-cancel]")){li.remove();return;}
+    if(e.target.closest("[data-save]")){
+      var v=li.querySelector("textarea").value.trim();if(!v){li.remove();return;}
+      CHANGES.unshift({page:cmp.page,kind:"mod",title:"Manual entry",body:v,src:"pm",region:{x:100,y:120,w:560,h:420}});
+      li.remove();renderChanges();
+    }
+  });
+});
+
+/* ---------- boot ---------- */
+renderClientList();renderPmList();renderCmpAnn();gate();applyPolicy();drawCompare();
+window.addEventListener("resize",function(){
+  CL.setZoom(CL.zoom);PM.setZoom(PM.zoom);drawCompare();
+});
+})();
+</script>
+</body>
+</html>
